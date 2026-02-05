@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useCyber } from '../context/CyberContext';
 import { Station, DeviceType, StationStatus } from '../types';
-import { X, Trash2, Save, Monitor, Gamepad2, AlertTriangle } from 'lucide-react';
+import { X, Trash2, Save, AlertTriangle, Cpu, Tv, Receipt } from 'lucide-react';
 
 interface Props {
   station: Station;
@@ -9,16 +9,37 @@ interface Props {
 }
 
 const StationSettingsModal: React.FC<Props> = ({ station, onClose }) => {
-  const { updateStation, deleteStation } = useCyber();
+  const { updateStation, deleteStation, tariffs } = useCyber();
   const [name, setName] = useState(station.name);
   const [type, setType] = useState(station.type);
+  const [specs, setSpecs] = useState(station.specs || '');
+  const [monitor, setMonitor] = useState(station.monitor || '');
+  const [tariffId, setTariffId] = useState(station.tariffId || '');
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Combined Handler for Type/Tariff Selection
+  const handleTypeSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const val = e.target.value;
+      const tariff = tariffs.find(t => t.id === val);
+      
+      if (tariff) {
+          setTariffId(tariff.id);
+          setType(tariff.deviceType);
+      } else {
+          // Fallback for Generic Types
+          setTariffId('');
+          setType(val as DeviceType);
+      }
+  };
 
   const handleSave = () => {
     updateStation({
       ...station,
       name,
-      type
+      type,
+      specs,
+      monitor,
+      tariffId: tariffId || undefined
     });
     onClose();
   };
@@ -28,13 +49,16 @@ const StationSettingsModal: React.FC<Props> = ({ station, onClose }) => {
       alert("No puedes eliminar una estación que está en uso.");
       return;
     }
-    // Delete and close - React will automatically unmount this component as the parent list updates
     deleteStation(station.id);
   };
 
+  // Determine current value for the unified select
+  // If tariffId exists and is valid, use it. Otherwise use the raw type.
+  const currentSelectValue = (tariffId && tariffs.some(t => t.id === tariffId)) ? tariffId : type;
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-slate-800 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl animate-in fade-in zoom-in duration-200">
+      <div className="bg-slate-800 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex justify-between items-center p-5 border-b border-slate-700">
@@ -58,26 +82,61 @@ const StationSettingsModal: React.FC<Props> = ({ station, onClose }) => {
             />
           </div>
 
-          {/* Type Select */}
+          {/* Unified Type / Tariff Selection */}
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-2">Tipo de Dispositivo</label>
-            <div className="grid grid-cols-2 gap-3">
-               {Object.values(DeviceType).map((t) => (
-                 <button
-                   key={t}
-                   type="button"
-                   onClick={() => setType(t)}
-                   className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all ${
-                     type === t 
-                     ? 'bg-blue-600/20 border-blue-500 text-white' 
-                     : 'bg-slate-700/50 border-slate-600 text-slate-400 hover:bg-slate-700'
-                   }`}
-                 >
-                   {t === DeviceType.PC ? <Monitor className="w-6 h-6" /> : <Gamepad2 className="w-6 h-6" />}
-                   <span className="text-sm font-bold">{t}</span>
-                 </button>
-               ))}
-            </div>
+             <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+                <Receipt className="w-4 h-4" /> Tipo de Equipo / Tarifa
+             </label>
+             <select 
+                value={currentSelectValue}
+                onChange={handleTypeSelection}
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+             >
+                <optgroup label="Tarifas Guardadas">
+                    {tariffs.map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.deviceType})</option>
+                    ))}
+                </optgroup>
+                <optgroup label="Tipos Genéricos (Sin Tarifa)">
+                    {Object.values(DeviceType).map(dt => (
+                        <option key={dt} value={dt}>{dt}</option>
+                    ))}
+                </optgroup>
+             </select>
+             <p className="text-xs text-slate-500 mt-2">
+                Selecciona una tarifa guardada para aplicar sus precios automáticamente.
+             </p>
+          </div>
+
+          {/* Hardware Specs Section */}
+          <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700 space-y-4">
+              <h3 className="text-sm font-bold text-slate-300 border-b border-slate-700 pb-2">Especificaciones Técnicas</h3>
+              
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
+                    <Cpu className="w-3 h-3" /> Hardware (CPU/GPU)
+                </label>
+                <input 
+                    type="text" 
+                    value={specs}
+                    onChange={(e) => setSpecs(e.target.value)}
+                    className="w-full bg-slate-700/50 border border-slate-600 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500"
+                    placeholder="Ej. Ryzen 5 5600, RTX 3060"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1 flex items-center gap-1">
+                    <Tv className="w-3 h-3" /> Monitor / Pantalla
+                </label>
+                <input 
+                    type="text" 
+                    value={monitor}
+                    onChange={(e) => setMonitor(e.target.value)}
+                    className="w-full bg-slate-700/50 border border-slate-600 rounded-lg p-2.5 text-white text-sm outline-none focus:border-blue-500"
+                    placeholder="Ej. Asus 27'' 144Hz"
+                />
+              </div>
           </div>
 
           {/* Delete Section with Inline Confirmation */}
@@ -128,7 +187,7 @@ const StationSettingsModal: React.FC<Props> = ({ station, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-5 bg-slate-900/50 border-t border-slate-700 flex gap-3">
+        <div className="p-5 bg-slate-900/50 border-t border-slate-700 flex gap-3 sticky bottom-0">
           <button 
             type="button"
             onClick={onClose}

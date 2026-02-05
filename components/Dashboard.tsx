@@ -323,6 +323,7 @@ const Dashboard: React.FC = () => {
       setIsModalOpen(false);
       setNewStationName('');
       setSelectedTariffId('');
+      setNewStationType(DeviceType.PC);
     }
   };
 
@@ -460,7 +461,7 @@ const Dashboard: React.FC = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">Tipo / Tarifa</label>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Tipo de Equipo / Tarifa</label>
                 <select 
                   value={selectedTariffId || newStationType}
                   onChange={handleTypeSelection}
@@ -473,14 +474,14 @@ const Dashboard: React.FC = () => {
                           </option>
                       ))}
                   </optgroup>
-                  <optgroup label="Tipos Genéricos (Sin Tarifa Específica)">
+                  <optgroup label="Tipos Genéricos">
                       {Object.values(DeviceType).map(type => (
                           <option key={type} value={type}>{type}</option>
                       ))}
                   </optgroup>
                 </select>
                 <p className="text-xs text-slate-500 mt-2">
-                    Selecciona una tarifa existente para aplicar sus precios automáticamente.
+                    Selecciona una tarifa guardada para aplicar sus precios automáticamente.
                 </p>
               </div>
 
