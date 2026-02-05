@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Station, Customer, Tariff, SessionType, Session, StationStatus, DeviceType } from '../types';
 import { useCyber } from '../context/CyberContext';
-import { X, Clock, Play, Gift, Plus, Star } from 'lucide-react';
+import { X, Clock, Play, Gift, Plus, Star, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface StartSessionModalProps {
   station: Station;
@@ -27,6 +28,8 @@ const StartSessionModal: React.FC<StartSessionModalProps> = ({ station, onClose 
 
   // Logic to calculate price for Fixed Time
   const calculateFixedPrice = (minutes: number) => {
+      if (!stationTariff) return 0;
+
       const hourlyRule = stationTariff.ranges.find(r => r.maxMinutes === 60) || stationTariff.ranges[stationTariff.ranges.length - 1];
       const hourlyPrice = hourlyRule ? hourlyRule.price : 0;
 
@@ -47,6 +50,12 @@ const StartSessionModal: React.FC<StartSessionModalProps> = ({ station, onClose 
   };
 
   const handleStart = () => {
+    if (sessionType !== SessionType.FREE && !stationTariff && sessionType !== SessionType.OPEN) {
+        // Allow OPEN session without tariff? Technically cost will just be 0 later.
+        // But for FIXED, we need a price.
+        // Actually, if price is 0, let it run (maybe promo day).
+    }
+
     let sessionData: Session = {
         id: Date.now().toString(),
         startTime: Date.now(),
@@ -118,6 +127,21 @@ const StartSessionModal: React.FC<StartSessionModalProps> = ({ station, onClose 
 
         <div className="p-6 space-y-6">
             
+            {/* Warning if no tariffs */}
+            {!stationTariff && (
+                <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-rose-500 mt-0.5" />
+                    <div>
+                        <p className="text-sm text-rose-300 font-bold">¡Atención!</p>
+                        <p className="text-xs text-rose-200/80">
+                            No hay tarifas configuradas para equipos tipo {station.type}. 
+                            El costo calculado será $0.00.
+                            <Link to="/settings" className="underline ml-1 text-white" onClick={onClose}>Ir a Configuración</Link>
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Clock Box */}
             <div className="bg-slate-900/50 rounded-xl p-5 border border-slate-700 text-center">
                 <p className="text-slate-400 text-xs uppercase tracking-widest mb-1">Hora de Entrada</p>

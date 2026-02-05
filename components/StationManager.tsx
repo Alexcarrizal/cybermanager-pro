@@ -37,27 +37,31 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
             setRentalCost(0);
         } else {
              // OPEN TIME LOGIC
-            const totalMinutes = Math.ceil(ms / (1000 * 60));
             const tariff = tariffs.find(t => t.deviceType === station.type) || tariffs[0];
             
-            const hourlyRule = tariff.ranges.find(r => r.maxMinutes === 60) || tariff.ranges[tariff.ranges.length - 1];
-            const hourlyPrice = hourlyRule ? hourlyRule.price : 0;
-            
-            const hours = Math.floor(totalMinutes / 60);
-            const remainingMinutes = totalMinutes % 60;
-            
-            let remainderPrice = 0;
-            if (remainingMinutes > 0) {
-                const remainderRule = tariff.ranges.find(r => remainingMinutes >= r.minMinutes && remainingMinutes <= r.maxMinutes);
-                if (remainderRule) {
-                remainderPrice = remainderRule.price;
-                } else {
-                const fallbackRule = tariff.ranges.find(r => r.maxMinutes >= remainingMinutes);
-                remainderPrice = fallbackRule ? fallbackRule.price : (hourlyPrice * (remainingMinutes/60)); 
+            if (tariff) {
+                const hourlyRule = tariff.ranges.find(r => r.maxMinutes === 60) || tariff.ranges[tariff.ranges.length - 1];
+                const hourlyPrice = hourlyRule ? hourlyRule.price : 0;
+                
+                const hours = Math.floor(Math.ceil(ms / (1000 * 60)) / 60);
+                const totalMinutes = Math.ceil(ms / (1000 * 60));
+                const remainingMinutes = totalMinutes % 60;
+                
+                let remainderPrice = 0;
+                if (remainingMinutes > 0) {
+                    const remainderRule = tariff.ranges.find(r => remainingMinutes >= r.minMinutes && remainingMinutes <= r.maxMinutes);
+                    if (remainderRule) {
+                    remainderPrice = remainderRule.price;
+                    } else {
+                    const fallbackRule = tariff.ranges.find(r => r.maxMinutes >= remainingMinutes);
+                    remainderPrice = fallbackRule ? fallbackRule.price : (hourlyPrice * (remainingMinutes/60)); 
+                    }
                 }
+                const estimatedCost = (hours * hourlyPrice) + remainderPrice;
+                setRentalCost(isNaN(estimatedCost) ? 0 : estimatedCost);
+            } else {
+                setRentalCost(0);
             }
-            const estimatedCost = (hours * hourlyPrice) + remainderPrice;
-            setRentalCost(isNaN(estimatedCost) ? 0 : estimatedCost);
         }
       };
       

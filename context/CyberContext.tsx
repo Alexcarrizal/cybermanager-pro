@@ -110,11 +110,11 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings>(() => {
     const saved = localStorage.getItem('businessSettings');
     const defaultSettings: BusinessSettings = {
-        name: 'Pc Forever',
-        address: 'Av. Principal #123, Centro',
-        website: 'www.pcforever.com.mx',
-        whatsapp: '5620053397',
-        footerMessage: 'Gracias por su preferencia. Todo trabajo requiere 50% de anticipo.',
+        name: 'Mi Ciber',
+        address: 'Dirección del Local',
+        website: '',
+        whatsapp: '',
+        footerMessage: 'Gracias por su preferencia.',
         // Default Distribution Rules
         distributionRules: [
             { id: '1', name: 'Reinversión', percentage: 40, color: 'text-blue-500' },
@@ -233,23 +233,28 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const totalMinutes = Math.ceil(durationMs / (1000 * 60));
         
         const tariff = tariffs.find(t => t.deviceType === station.type) || tariffs[0];
-        const hourlyRule = tariff.ranges.find(r => r.maxMinutes === 60) || tariff.ranges[tariff.ranges.length - 1];
-        const hourlyPrice = hourlyRule ? hourlyRule.price : 0;
         
-        const hours = Math.floor(totalMinutes / 60);
-        const remainingMinutes = totalMinutes % 60;
-        
-        let remainderPrice = 0;
-        if (remainingMinutes > 0) {
-          const remainderRule = tariff.ranges.find(r => remainingMinutes >= r.minMinutes && remainingMinutes <= r.maxMinutes);
-          if (remainderRule) {
-             remainderPrice = remainderRule.price;
-          } else {
-             const fallbackRule = tariff.ranges.find(r => r.maxMinutes >= remainingMinutes);
-             remainderPrice = fallbackRule ? fallbackRule.price : (hourlyPrice * (remainingMinutes/60)); 
-          }
+        if (tariff) {
+            const hourlyRule = tariff.ranges.find(r => r.maxMinutes === 60) || tariff.ranges[tariff.ranges.length - 1];
+            const hourlyPrice = hourlyRule ? hourlyRule.price : 0;
+            
+            const hours = Math.floor(totalMinutes / 60);
+            const remainingMinutes = totalMinutes % 60;
+            
+            let remainderPrice = 0;
+            if (remainingMinutes > 0) {
+              const remainderRule = tariff.ranges.find(r => remainingMinutes >= r.minMinutes && remainingMinutes <= r.maxMinutes);
+              if (remainderRule) {
+                 remainderPrice = remainderRule.price;
+              } else {
+                 const fallbackRule = tariff.ranges.find(r => r.maxMinutes >= remainingMinutes);
+                 remainderPrice = fallbackRule ? fallbackRule.price : (hourlyPrice * (remainingMinutes/60)); 
+              }
+            }
+            rentalCost = (hours * hourlyPrice) + remainderPrice;
+        } else {
+            rentalCost = 0; // No tariff found
         }
-        rentalCost = (hours * hourlyPrice) + remainderPrice;
       }
 
       rentalCost = isNaN(rentalCost) ? 0 : rentalCost;

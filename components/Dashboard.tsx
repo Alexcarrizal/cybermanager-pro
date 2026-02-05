@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar } from 'lucide-react';
+import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu } from 'lucide-react';
 import { Station, StationStatus, DeviceType, Tariff, SessionType, PaymentMethod } from '../types';
 import StartSessionModal from './StartSessionModal';
 import AddProductToSessionModal from './AddProductToSessionModal';
@@ -39,27 +39,31 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
             setRentalCost(0);
         } else {
              // OPEN TIME LOGIC
-            const totalMinutes = Math.ceil(ms / (1000 * 60));
             const tariff = tariffs.find(t => t.deviceType === station.type) || tariffs[0];
             
-            const hourlyRule = tariff.ranges.find(r => r.maxMinutes === 60) || tariff.ranges[tariff.ranges.length - 1];
-            const hourlyPrice = hourlyRule ? hourlyRule.price : 0;
-            
-            const hours = Math.floor(totalMinutes / 60);
-            const remainingMinutes = totalMinutes % 60;
-            
-            let remainderPrice = 0;
-            if (remainingMinutes > 0) {
-                const remainderRule = tariff.ranges.find(r => remainingMinutes >= r.minMinutes && remainingMinutes <= r.maxMinutes);
-                if (remainderRule) {
-                remainderPrice = remainderRule.price;
-                } else {
-                const fallbackRule = tariff.ranges.find(r => r.maxMinutes >= remainingMinutes);
-                remainderPrice = fallbackRule ? fallbackRule.price : (hourlyPrice * (remainingMinutes/60)); 
+            if (tariff) {
+                const hourlyRule = tariff.ranges.find(r => r.maxMinutes === 60) || tariff.ranges[tariff.ranges.length - 1];
+                const hourlyPrice = hourlyRule ? hourlyRule.price : 0;
+                
+                const hours = Math.floor(Math.ceil(ms / (1000 * 60)) / 60);
+                const totalMinutes = Math.ceil(ms / (1000 * 60));
+                const remainingMinutes = totalMinutes % 60;
+                
+                let remainderPrice = 0;
+                if (remainingMinutes > 0) {
+                    const remainderRule = tariff.ranges.find(r => remainingMinutes >= r.minMinutes && remainingMinutes <= r.maxMinutes);
+                    if (remainderRule) {
+                    remainderPrice = remainderRule.price;
+                    } else {
+                    const fallbackRule = tariff.ranges.find(r => r.maxMinutes >= remainingMinutes);
+                    remainderPrice = fallbackRule ? fallbackRule.price : (hourlyPrice * (remainingMinutes/60)); 
+                    }
                 }
+                const estimatedCost = (hours * hourlyPrice) + remainderPrice;
+                setRentalCost(isNaN(estimatedCost) ? 0 : estimatedCost);
+            } else {
+                setRentalCost(0);
             }
-            const estimatedCost = (hours * hourlyPrice) + remainderPrice;
-            setRentalCost(isNaN(estimatedCost) ? 0 : estimatedCost);
         }
       };
       updateTimer();
@@ -110,7 +114,7 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
     <>
     <div className={`relative p-5 rounded-2xl border-2 transition-all duration-300 shadow-lg group ${getStatusClasses()}`}>
       
-      <div className="flex justify-between items-start mb-4 pr-8">
+      <div className="flex justify-between items-start mb-2 pr-8">
         <div className="flex items-center gap-3">
           <div className={`p-2.5 rounded-lg transition-colors duration-500 ${station.status === StationStatus.OCCUPIED ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'bg-slate-700 text-slate-400'}`}>
             <Icon className="w-6 h-6" />
@@ -127,6 +131,22 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
           }`} 
         />
       </div>
+
+      {/* Hardware Specs Display */}
+      {(station.specs || station.monitor) && (
+        <div className="flex flex-wrap gap-2 mb-4 pl-1">
+             {station.specs && (
+                 <span className="inline-flex items-center gap-1 text-[10px] bg-slate-700/50 border border-slate-600 px-1.5 py-0.5 rounded text-slate-300">
+                    <Cpu className="w-3 h-3" /> {station.specs}
+                 </span>
+             )}
+             {station.monitor && (
+                 <span className="inline-flex items-center gap-1 text-[10px] bg-slate-700/50 border border-slate-600 px-1.5 py-0.5 rounded text-slate-300">
+                    <Tv className="w-3 h-3" /> {station.monitor}
+                 </span>
+             )}
+        </div>
+      )}
 
       <div className="space-y-4">
         {station.status === StationStatus.OCCUPIED ? (
@@ -275,7 +295,9 @@ const Dashboard: React.FC = () => {
         id: Date.now().toString(),
         name: newStationName,
         type: newStationType,
-        status: StationStatus.AVAILABLE
+        status: StationStatus.AVAILABLE,
+        specs: '',
+        monitor: ''
       });
       setIsModalOpen(false);
       setNewStationName('');
@@ -371,9 +393,27 @@ const Dashboard: React.FC = () => {
 
       {/* Station Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8">
-        {stations.map(station => (
-          <StationCard key={station.id} station={station} tariffs={tariffs} />
-        ))}
+        {stations.length === 0 ? (
+           <div className="col-span-full py-16 text-center border-2 border-dashed border-slate-700 rounded-2xl">
+               <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Monitor className="w-8 h-8 text-slate-600" />
+               </div>
+               <h3 className="text-xl font-bold text-white mb-2">No tienes equipos registrados</h3>
+               <p className="text-slate-400 mb-6 max-w-md mx-auto">
+                   Agrega tu primera computadora o consola para comenzar a gestionar el tiempo de renta.
+               </p>
+               <button 
+                 onClick={() => setIsModalOpen(true)}
+                 className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold shadow-lg shadow-blue-900/30 inline-flex items-center gap-2"
+               >
+                 <PlusCircle className="w-5 h-5" /> Agregar Equipo
+               </button>
+           </div>
+        ) : (
+            stations.map(station => (
+              <StationCard key={station.id} station={station} tariffs={tariffs} />
+            ))
+        )}
       </div>
 
       {/* Modals */}
