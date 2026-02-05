@@ -1,4 +1,3 @@
-
 {
   "name": "cybermanager-pro",
   "private": true,
@@ -10,17 +9,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^0.563.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.0",
+    "lucide-react": "^0.378.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.0",
     "xlsx": "0.18.5"
   },
   "devDependencies": {
-    "@types/react": "^19.2.4",
-    "@types/react-dom": "^19.2.4",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.2.1",
     "typescript": "^5.3.3",
-    "vite": "^5.1.4"
+    "vite": "^5.2.0"
   }
 }
