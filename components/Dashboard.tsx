@@ -39,7 +39,10 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
             setRentalCost(0);
         } else {
              // OPEN TIME LOGIC
-            const tariff = tariffs.find(t => t.deviceType === station.type) || tariffs[0];
+            // Find Tariff: Priority to specific tariffId, fallback to deviceType
+            const specificTariff = station.tariffId ? tariffs.find(t => t.id === station.tariffId) : undefined;
+            const typeTariff = tariffs.find(t => t.deviceType === station.type);
+            const tariff = specificTariff || typeTariff || tariffs[0];
             
             if (tariff) {
                 const hourlyRule = tariff.ranges.find(r => r.maxMinutes === 60) || tariff.ranges[tariff.ranges.length - 1];
@@ -259,7 +262,11 @@ const Dashboard: React.FC = () => {
   const { sales, stations, tariffs, addStation } = useCyber();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStationName, setNewStationName] = useState('');
+  
+  // State for logic
   const [newStationType, setNewStationType] = useState<DeviceType>(DeviceType.PC);
+  const [selectedTariffId, setSelectedTariffId] = useState('');
+
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
@@ -268,8 +275,6 @@ const Dashboard: React.FC = () => {
   
   // 1. Weekly Sales (Starts Saturday, Ends Friday)
   const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
-  // We calculate days passed since last Saturday. 
-  // If Sat(6) -> 0 days. Sun(0) -> 1 day. Fri(5) -> 6 days.
   const daysSinceSaturday = (currentDay + 1) % 7;
   const startOfWeek = new Date(now);
   startOfWeek.setDate(now.getDate() - daysSinceSaturday);
@@ -278,15 +283,30 @@ const Dashboard: React.FC = () => {
   const weeklySales = sales.filter(s => s.timestamp >= startOfWeek.getTime());
   const weeklyRevenue = weeklySales.reduce((acc, curr) => acc + curr.total, 0);
 
-  // 2. Monthly Sales (Calendar Month)
+  // 2. Monthly Sales
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   startOfMonth.setHours(0, 0, 0, 0);
-  
   const monthlySales = sales.filter(s => s.timestamp >= startOfMonth.getTime());
   const monthlyRevenue = monthlySales.reduce((acc, curr) => acc + curr.total, 0);
 
-  // Format Dates for Display
+  // Format Dates
   const monthName = now.toLocaleString('es-ES', { month: 'long' });
+
+  // Handle Tariff Selection in Modal
+  const handleTypeSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const val = e.target.value;
+      
+      // Check if value is a Tariff ID
+      const tariff = tariffs.find(t => t.id === val);
+      if (tariff) {
+          setSelectedTariffId(tariff.id);
+          setNewStationType(tariff.deviceType);
+      } else {
+          // It's a raw device type (fallback)
+          setSelectedTariffId('');
+          setNewStationType(val as DeviceType);
+      }
+  };
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -297,10 +317,12 @@ const Dashboard: React.FC = () => {
         type: newStationType,
         status: StationStatus.AVAILABLE,
         specs: '',
-        monitor: ''
+        monitor: '',
+        tariffId: selectedTariffId || undefined
       });
       setIsModalOpen(false);
       setNewStationName('');
+      setSelectedTariffId('');
     }
   };
 
@@ -326,7 +348,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Monthly Sales Card (Replaces Active Stations) */}
+        {/* Monthly Sales Card */}
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
           <div className="flex justify-between items-start">
             <div>
@@ -423,7 +445,7 @@ const Dashboard: React.FC = () => {
       {/* Modal for New Station */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-slate-800 p-6 rounded-2xl w-full max-w-md border border-slate-700 shadow-2xl">
+          <div className="bg-slate-800 p-6 rounded-2xl w-full max-w-md border border-slate-700 shadow-2xl animate-in fade-in zoom-in duration-200">
             <h3 className="text-xl font-bold text-white mb-4">Nuevo Equipo</h3>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
@@ -436,18 +458,32 @@ const Dashboard: React.FC = () => {
                   placeholder="Ej. PC Gamer 04"
                 />
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">Tipo</label>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Tipo / Tarifa</label>
                 <select 
-                  value={newStationType}
-                  onChange={e => setNewStationType(e.target.value as DeviceType)}
+                  value={selectedTariffId || newStationType}
+                  onChange={handleTypeSelection}
                   className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 >
-                  {Object.values(DeviceType).map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
+                  <optgroup label="Tarifas Guardadas">
+                      {tariffs.map(t => (
+                          <option key={t.id} value={t.id}>
+                              {t.name} ({t.deviceType})
+                          </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="Tipos Genéricos (Sin Tarifa Específica)">
+                      {Object.values(DeviceType).map(type => (
+                          <option key={type} value={type}>{type}</option>
+                      ))}
+                  </optgroup>
                 </select>
+                <p className="text-xs text-slate-500 mt-2">
+                    Selecciona una tarifa existente para aplicar sus precios automáticamente.
+                </p>
               </div>
+
               <div className="flex justify-end gap-3 pt-4">
                 <button 
                   type="button" 
