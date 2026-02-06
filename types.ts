@@ -133,6 +133,7 @@ export interface StreamingPlatform {
   id: string;
   name: string;
   category: string; // e.g., 'Social streaming', 'Adultos', 'Familiar'
+  distributorId?: string; // Linked distributor
   suggestedPrice: number;
   cost: number;
 }

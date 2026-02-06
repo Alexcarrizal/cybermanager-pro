@@ -22,6 +22,7 @@ const StreamingPlatformModal: React.FC<Props> = ({ onClose }) => {
     // Platform Form
     const [pName, setPName] = useState('');
     const [pCategory, setPCategory] = useState('');
+    const [pDistributorId, setPDistributorId] = useState('');
     const [pPrice, setPPrice] = useState('');
     const [pCost, setPCost] = useState('');
 
@@ -34,6 +35,7 @@ const StreamingPlatformModal: React.FC<Props> = ({ onClose }) => {
             id: Date.now().toString(),
             name: pName,
             category: pCategory || 'General',
+            distributorId: pDistributorId || undefined,
             suggestedPrice: Number(pPrice),
             cost: Number(pCost)
         });
@@ -50,9 +52,14 @@ const StreamingPlatformModal: React.FC<Props> = ({ onClose }) => {
     };
 
     const resetForms = () => {
-        setPName(''); setPCategory(''); setPPrice(''); setPCost('');
+        setPName(''); setPCategory(''); setPPrice(''); setPCost(''); setPDistributorId('');
         setDName('');
         setIsAdding(false);
+    };
+
+    const getDistributorName = (id?: string) => {
+        if(!id) return null;
+        return streamingDistributors.find(d => d.id === id)?.name;
     };
 
     return (
@@ -132,16 +139,30 @@ const StreamingPlatformModal: React.FC<Props> = ({ onClose }) => {
                                         value={pCategory} onChange={e => setPCategory(e.target.value)}
                                         className="bg-slate-900 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-purple-500"
                                     />
-                                    <input 
-                                        type="number" placeholder="Precio Sugerido" 
-                                        value={pPrice} onChange={e => setPPrice(e.target.value)}
+                                    
+                                    <select
+                                        value={pDistributorId}
+                                        onChange={e => setPDistributorId(e.target.value)}
                                         className="bg-slate-900 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-purple-500"
-                                    />
-                                    <input 
-                                        type="number" placeholder="Costo" 
-                                        value={pCost} onChange={e => setPCost(e.target.value)}
-                                        className="bg-slate-900 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-purple-500"
-                                    />
+                                    >
+                                        <option value="">-- Seleccionar Distribuidor --</option>
+                                        {streamingDistributors.map(d => (
+                                            <option key={d.id} value={d.id}>{d.name}</option>
+                                        ))}
+                                    </select>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input 
+                                            type="number" placeholder="Precio Sugerido" 
+                                            value={pPrice} onChange={e => setPPrice(e.target.value)}
+                                            className="bg-slate-900 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-purple-500"
+                                        />
+                                        <input 
+                                            type="number" placeholder="Costo" 
+                                            value={pCost} onChange={e => setPCost(e.target.value)}
+                                            className="bg-slate-900 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-purple-500"
+                                        />
+                                    </div>
                                 </div>
                             ) : (
                                 <div>
@@ -176,6 +197,11 @@ const StreamingPlatformModal: React.FC<Props> = ({ onClose }) => {
                                         <div>
                                             <h4 className="font-bold text-white text-sm line-clamp-1">{platform.name}</h4>
                                             <p className="text-xs text-slate-400">{platform.category}</p>
+                                            {platform.distributorId && (
+                                                <p className="text-[10px] text-blue-400 mt-0.5">
+                                                    Prov: {getDistributorName(platform.distributorId)}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 mb-4">
