@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { Tv, AlertTriangle, Calendar, Clock, ChevronRight, Plus, Settings, MessageCircle, Edit, Trash2, Search, PlayCircle } from 'lucide-react';
+import { Tv, AlertTriangle, Calendar, Clock, ChevronRight, Plus, Settings, MessageCircle, Edit, Trash2, Search, PlayCircle, StickyNote, RefreshCw } from 'lucide-react';
 import StreamingPlatformModal from './StreamingPlatformModal';
 import StreamingSaleModal from './StreamingSaleModal';
+import StreamingNotesModal from './StreamingNotesModal';
+import StreamingRenewModal from './StreamingRenewModal';
 import { StreamingAccount } from '../types';
 
 const StreamingManager: React.FC = () => {
@@ -11,14 +13,20 @@ const StreamingManager: React.FC = () => {
     // Modals state
     const [showPlatformModal, setShowPlatformModal] = useState(false);
     const [showSaleModal, setShowSaleModal] = useState(false);
+    
+    // Action Modals
+    const [showNotesModal, setShowNotesModal] = useState(false);
+    const [showRenewModal, setShowRenewModal] = useState(false);
+    
+    // Selection state
     const [accountToEdit, setAccountToEdit] = useState<StreamingAccount | undefined>(undefined);
+    const [selectedAccount, setSelectedAccount] = useState<StreamingAccount | null>(null); // For notes/renew
     const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
     
     const [searchTerm, setSearchTerm] = useState('');
 
     // Helpers
     const getPlatform = (id: string) => streamingPlatforms.find(p => p.id === id);
-    // const getDistributor = (id: string) => streamingDistributors.find(d => d.id === id); // Unused currently
     
     const now = Date.now();
     
@@ -77,6 +85,16 @@ const StreamingManager: React.FC = () => {
     const handleEditClick = (acc: StreamingAccount) => {
         setAccountToEdit(acc);
         setShowSaleModal(true);
+    }
+
+    const handleNotesClick = (acc: StreamingAccount) => {
+        setSelectedAccount(acc);
+        setShowNotesModal(true);
+    }
+
+    const handleRenewClick = (acc: StreamingAccount) => {
+        setSelectedAccount(acc);
+        setShowRenewModal(true);
     }
 
     const handleNewSaleClick = () => {
@@ -196,6 +214,7 @@ const StreamingManager: React.FC = () => {
                         <tbody className="divide-y divide-slate-700">
                             {filteredAccounts.map(acc => {
                                 const platform = getPlatform(acc.platformId);
+                                const hasNotes = acc.notes && acc.notes.trim().length > 0;
                                 
                                 return (
                                     <tr key={acc.id} className="hover:bg-slate-700/30 transition-colors group">
@@ -237,25 +256,44 @@ const StreamingManager: React.FC = () => {
                                             {formatDate(acc.expirationDate)}
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
+                                            <div className="flex justify-end gap-1">
+                                                <button 
+                                                    onClick={() => handleNotesClick(acc)}
+                                                    className={`p-2 rounded-lg transition-colors relative ${hasNotes ? 'text-amber-400 bg-amber-900/10 hover:bg-amber-900/30' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                                                    title={hasNotes ? "Ver notas" : "Agregar nota"}
+                                                >
+                                                    <StickyNote className="w-4 h-4" />
+                                                    {hasNotes && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-amber-500 rounded-full"></span>}
+                                                </button>
+                                                
+                                                <button 
+                                                    onClick={() => handleRenewClick(acc)}
+                                                    className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-cyan-900/20 rounded-lg transition-colors"
+                                                    title="Renovar cuenta"
+                                                >
+                                                    <RefreshCw className="w-4 h-4" />
+                                                </button>
+
                                                 <button 
                                                     onClick={() => handleWhatsapp(acc.customerPhone, acc)}
                                                     className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors"
-                                                    title="Enviar recordatorio por WhatsApp"
+                                                    title="Enviar WhatsApp"
                                                 >
                                                     <MessageCircle className="w-4 h-4" />
                                                 </button>
+                                                
                                                 <button 
                                                     onClick={() => handleEditClick(acc)}
                                                     className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-                                                    title="Editar cuenta"
+                                                    title="Editar"
                                                 >
                                                     <Edit className="w-4 h-4" />
                                                 </button>
+                                                
                                                 <button 
                                                     onClick={() => setAccountToDelete(acc.id)}
                                                     className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-900/20 rounded-lg transition-colors"
-                                                    title="Eliminar cuenta"
+                                                    title="Eliminar"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -283,6 +321,20 @@ const StreamingManager: React.FC = () => {
                 <StreamingSaleModal 
                     onClose={() => setShowSaleModal(false)} 
                     accountToEdit={accountToEdit}
+                />
+            )}
+
+            {showNotesModal && selectedAccount && (
+                <StreamingNotesModal 
+                    account={selectedAccount}
+                    onClose={() => setShowNotesModal(false)}
+                />
+            )}
+
+            {showRenewModal && selectedAccount && (
+                <StreamingRenewModal 
+                    account={selectedAccount}
+                    onClose={() => setShowRenewModal(false)}
                 />
             )}
 
