@@ -78,6 +78,7 @@ interface CyberContextType {
   // Database Management
   importDatabase: (data: DatabaseBackup) => void;
   exportDatabase: () => void;
+  resetDatabase: () => void;
 }
 
 const CyberContext = createContext<CyberContextType | undefined>(undefined);
@@ -553,6 +554,35 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       XLSX.writeFile(wb, `CyberManager_Respaldo_${dateStr}.xlsx`);
   };
 
+  const resetDatabase = () => {
+      setStations(INITIAL_STATIONS);
+      setProducts(INITIAL_PRODUCTS);
+      setTariffs(INITIAL_TARIFFS);
+      setSales(INITIAL_SALES);
+      setExpenses(INITIAL_EXPENSES);
+      setCustomers(INITIAL_CUSTOMERS);
+      setBusinessSettings({
+        name: 'Mi Ciber',
+        address: 'Dirección del Local',
+        website: '',
+        whatsapp: '',
+        footerMessage: 'Gracias por su preferencia.',
+        adminPin: '1234',
+        distributionRules: [
+            { id: '1', name: 'Reinversión', percentage: 40, color: 'text-blue-500' },
+            { id: '2', name: 'Sueldos / Ganancia', percentage: 30, color: 'text-emerald-500' },
+            { id: '3', name: 'Fondo de Ahorro', percentage: 30, color: 'text-purple-500' }
+        ]
+      });
+      setStreamingAccounts(INITIAL_STREAMING_ACCOUNTS);
+      setStreamingPlatforms(INITIAL_PLATFORMS);
+      setStreamingDistributors(INITIAL_DISTRIBUTORS);
+      setServiceOrders(INITIAL_SERVICE_ORDERS);
+      
+      // Reload to ensure clear state
+      setTimeout(() => window.location.reload(), 500); 
+  };
+
 
   return (
     <CyberContext.Provider value={{
@@ -567,7 +597,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       addStreamingPlatform, updateStreamingPlatform, deleteStreamingPlatform,
       addStreamingDistributor, updateStreamingDistributor, deleteStreamingDistributor,
       addServiceOrder, updateServiceOrder, deleteServiceOrder,
-      importDatabase, exportDatabase
+      importDatabase, exportDatabase, resetDatabase
     }}>
       {children}
     </CyberContext.Provider>

@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCyber } from '../context/CyberContext';
 import { Tariff, TariffRange, DeviceType, BusinessSettings, DatabaseBackup } from '../types';
-import { Trash2, Plus, Settings as SettingsIcon, Save, X, Building2, ChevronDown, Download, Upload, Database, Lock, Eye, EyeOff } from 'lucide-react';
+import { Trash2, Plus, Settings as SettingsIcon, Save, X, Building2, ChevronDown, Download, Upload, Database, Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const Settings: React.FC = () => {
   const { 
       tariffs, updateTariff, addTariff, deleteTariff, 
       businessSettings, updateBusinessSettings,
-      importDatabase, exportDatabase
+      importDatabase, exportDatabase, resetDatabase
   } = useCyber();
 
   const [localTariffs, setLocalTariffs] = useState<Tariff[]>([]);
@@ -178,6 +178,19 @@ const Settings: React.FC = () => {
           adminPin: newPin
       });
       alert('Información del negocio y seguridad actualizada.');
+  };
+
+  const handleFactoryReset = () => {
+    if (confirm('PELIGRO: ¿Estás seguro de que deseas BORRAR TODA LA INFORMACIÓN? Esta acción eliminará productos, ventas, clientes y configuraciones de forma permanente.')) {
+        if (confirm('¿Realmente deseas continuar? Esta acción NO se puede deshacer.')) {
+            const pin = prompt('Ingresa el PIN de administrador actual para confirmar el borrado:');
+            if (pin === businessSettings.adminPin) {
+                resetDatabase();
+            } else {
+                alert('PIN incorrecto. Acción cancelada.');
+            }
+        }
+    }
   };
 
   // --- IMPORT FROM EXCEL ---
@@ -400,7 +413,7 @@ const Settings: React.FC = () => {
           <h3 className="text-xl font-bold text-white">Tarifas de Renta</h3>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-32">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
         {localTariffs.map((tariff) => (
           <div key={tariff.id} className="bg-slate-800 rounded-lg p-5 border border-slate-700 shadow-lg relative group">
             <div className="flex justify-between items-center mb-4">
@@ -470,6 +483,27 @@ const Settings: React.FC = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* --- Danger Zone --- */}
+      <div className="mb-24 pt-10 border-t border-rose-900/50">
+          <div className="bg-rose-950/20 border border-rose-500/30 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-rose-900/50 rounded-full border border-rose-500/50">
+                      <AlertTriangle className="w-6 h-6 text-rose-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-rose-400">Zona de Peligro</h3>
+              </div>
+              <p className="text-slate-400 text-sm mb-6 max-w-2xl">
+                  Las siguientes acciones son destructivas y no se pueden deshacer. Asegúrate de tener un respaldo antes de continuar.
+              </p>
+              <button 
+                  onClick={handleFactoryReset}
+                  className="px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold shadow-lg shadow-rose-900/30 flex items-center gap-2 transition-all hover:scale-[1.01]"
+              >
+                  <Trash2 className="w-5 h-5" /> REINICIAR DE FÁBRICA (Borrar Todo)
+              </button>
+          </div>
       </div>
 
       {/* Floating Scroll Button */}
