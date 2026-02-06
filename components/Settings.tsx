@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCyber } from '../context/CyberContext';
 import { Tariff, TariffRange, DeviceType, BusinessSettings, DatabaseBackup } from '../types';
-import { Trash2, Plus, Settings as SettingsIcon, Save, X, Building2, ChevronDown, Download, Upload, Database } from 'lucide-react';
+import { Trash2, Plus, Settings as SettingsIcon, Save, X, Building2, ChevronDown, Download, Upload, Database, Lock, Eye, EyeOff } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 const Settings: React.FC = () => {
@@ -24,6 +24,10 @@ const Settings: React.FC = () => {
   const [bWebsite, setBWebsite] = useState(businessSettings.website);
   const [bWhatsapp, setBWhatsapp] = useState(businessSettings.whatsapp);
 
+  // Security State
+  const [newPin, setNewPin] = useState(businessSettings.adminPin);
+  const [showPin, setShowPin] = useState(false);
+
   useEffect(() => {
     setLocalTariffs(JSON.parse(JSON.stringify(tariffs))); // Deep copy
   }, [tariffs]);
@@ -34,6 +38,7 @@ const Settings: React.FC = () => {
       setBAddress(businessSettings.address);
       setBWebsite(businessSettings.website);
       setBWhatsapp(businessSettings.whatsapp);
+      setNewPin(businessSettings.adminPin);
   }, []); // eslint-disable-line
 
   const handleUpdateTariffName = (tariffId: string, newName: string) => {
@@ -132,7 +137,6 @@ const Settings: React.FC = () => {
         ]
     };
     setLocalTariffs([...localTariffs, newTariff]);
-    // Scroll to bottom after adding
     setTimeout(() => {
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
@@ -160,13 +164,20 @@ const Settings: React.FC = () => {
   };
 
   const handleSaveBusiness = () => {
+      if (!newPin || newPin.length < 4) {
+          alert('El PIN debe tener al menos 4 caracteres.');
+          return;
+      }
+
       updateBusinessSettings({
+          ...businessSettings,
           name: bName,
           address: bAddress,
           website: bWebsite,
-          whatsapp: bWhatsapp
+          whatsapp: bWhatsapp,
+          adminPin: newPin
       });
-      alert('Información del negocio actualizada.');
+      alert('Información del negocio y seguridad actualizada.');
   };
 
   // --- IMPORT FROM EXCEL ---
@@ -208,37 +219,20 @@ const Settings: React.FC = () => {
                   });
               };
 
-              // 1. Business
               const businessRaw = parseSheet("Resumen", ['distributionRules']);
               if (businessRaw.length > 0) backupData.businessSettings = businessRaw[0];
-
-              // 2. Sales
               backupData.sales = parseSheet("Ventas", ['items']);
-
-              // 3. Products
               backupData.products = parseSheet("Productos");
-
-              // 4. Expenses
               backupData.expenses = parseSheet("Gastos");
-
-              // 5. Customers
               backupData.customers = parseSheet("Clientes");
-
-              // 6. Tariffs
               backupData.tariffs = parseSheet("Tarifas", ['ranges']);
-
-              // 7. Stations
               backupData.stations = parseSheet("Estaciones", ['currentSession']);
-
-              // 8. Streaming
               backupData.streamingAccounts = parseSheet("CuentasStreaming");
               backupData.streamingPlatforms = parseSheet("Plataformas");
               backupData.streamingDistributors = parseSheet("Distribuidores");
-
-              // 9. Service Orders
               backupData.serviceOrders = parseSheet("Reparaciones");
 
-              if (confirm('ADVERTENCIA: Esta acción REEMPLAZARÁ toda la base de datos actual con la información del archivo Excel. ¿Deseas continuar?')) {
+              if (confirm('ADVERTENCIA: Esta acción REEMPLAZARÁ toda la base de datos actual. ¿Deseas continuar?')) {
                   importDatabase(backupData as DatabaseBackup);
                   alert('Base de datos importada exitosamente. La página se recargará.');
                   window.location.reload();
@@ -246,9 +240,8 @@ const Settings: React.FC = () => {
 
           } catch (error) {
               console.error(error);
-              alert('Error al leer el archivo Excel. Asegúrate de que sea un respaldo válido generado por este sistema.');
+              alert('Error al leer el archivo Excel.');
           } finally {
-              // Reset input
               if (fileInputRef.current) fileInputRef.current.value = '';
           }
       };
@@ -307,64 +300,98 @@ const Settings: React.FC = () => {
            </div>
       </div>
 
-      {/* --- Business Data Section --- */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-lg mb-10">
-           <div className="flex items-center gap-3 mb-6 border-b border-slate-700 pb-4">
-                <Building2 className="w-6 h-6 text-blue-500" />
-                <h3 className="text-lg font-bold text-white">Datos del Negocio</h3>
-           </div>
-           
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="col-span-1 md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Nombre del Negocio</label>
-                    <input 
-                        type="text"
-                        value={bName}
-                        onChange={(e) => setBName(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
-                        placeholder="Ej. Pc Forever"
-                    />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Dirección</label>
-                    <input 
-                        type="text"
-                        value={bAddress}
-                        onChange={(e) => setBAddress(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
-                        placeholder="Calle, Número, Colonia, Ciudad"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Página Web / Facebook</label>
-                    <input 
-                        type="text"
-                        value={bWebsite}
-                        onChange={(e) => setBWebsite(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
-                        placeholder="www.ejemplo.com"
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">WhatsApp</label>
-                    <input 
-                        type="text"
-                        value={bWhatsapp}
-                        onChange={(e) => setBWhatsapp(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
-                        placeholder="521..."
-                    />
-                </div>
-           </div>
-           
-           <div className="mt-6">
-               <button 
-                  onClick={handleSaveBusiness}
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2"
-               >
-                   <Save className="w-4 h-4" /> Guardar Información
-               </button>
-           </div>
+      {/* --- Business & Security Section --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+          
+          {/* Business Info */}
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-lg">
+               <div className="flex items-center gap-3 mb-6 border-b border-slate-700 pb-4">
+                    <Building2 className="w-6 h-6 text-blue-500" />
+                    <h3 className="text-lg font-bold text-white">Datos del Negocio</h3>
+               </div>
+               
+               <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">Nombre del Negocio</label>
+                        <input 
+                            type="text"
+                            value={bName}
+                            onChange={(e) => setBName(e.target.value)}
+                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">Dirección</label>
+                        <input 
+                            type="text"
+                            value={bAddress}
+                            onChange={(e) => setBAddress(e.target.value)}
+                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">Web / Facebook</label>
+                        <input 
+                            type="text"
+                            value={bWebsite}
+                            onChange={(e) => setBWebsite(e.target.value)}
+                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">WhatsApp</label>
+                        <input 
+                            type="text"
+                            value={bWhatsapp}
+                            onChange={(e) => setBWhatsapp(e.target.value)}
+                            className="w-full bg-slate-700 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
+                        />
+                    </div>
+               </div>
+          </div>
+
+          {/* Security */}
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-lg flex flex-col">
+               <div className="flex items-center gap-3 mb-6 border-b border-slate-700 pb-4">
+                    <Lock className="w-6 h-6 text-rose-500" />
+                    <h3 className="text-lg font-bold text-white">Seguridad y Acceso</h3>
+               </div>
+               
+               <div className="flex-1 space-y-4">
+                    <p className="text-sm text-slate-400">
+                        Configura el PIN de acceso al sistema. Este código será solicitado cada vez que inicies la aplicación.
+                    </p>
+                    
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">PIN de Administrador</label>
+                        <div className="relative">
+                            <input 
+                                type={showPin ? "text" : "password"}
+                                value={newPin}
+                                onChange={(e) => setNewPin(e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-rose-500 text-center tracking-widest font-bold text-xl"
+                                maxLength={4}
+                            />
+                            <button 
+                                onClick={() => setShowPin(!showPin)}
+                                className="absolute right-3 top-3.5 text-slate-500 hover:text-white"
+                            >
+                                {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                            </button>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2 text-center">Recomendado: 4 dígitos numéricos.</p>
+                    </div>
+               </div>
+
+               <div className="mt-6 pt-6 border-t border-slate-700">
+                   <button 
+                      onClick={handleSaveBusiness}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2"
+                   >
+                       <Save className="w-4 h-4" /> Guardar Todos los Cambios
+                   </button>
+               </div>
+          </div>
       </div>
 
       {/* --- Tariffs Section --- */}

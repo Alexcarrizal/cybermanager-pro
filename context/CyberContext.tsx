@@ -23,6 +23,11 @@ interface CyberContextType {
   customers: Customer[];
   businessSettings: BusinessSettings;
   
+  // Auth State
+  isAuthenticated: boolean;
+  login: (pin: string) => boolean;
+  logout: () => void;
+  
   // Streaming Data
   streamingAccounts: StreamingAccount[];
   streamingPlatforms: StreamingPlatform[];
@@ -78,6 +83,9 @@ interface CyberContextType {
 const CyberContext = createContext<CyberContextType | undefined>(undefined);
 
 export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Auth State (Session based, not persisted in localstorage for security in this context)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   // Initialize from LocalStorage or Defaults
   const [stations, setStations] = useState<Station[]>(() => {
     const saved = localStorage.getItem('stations');
@@ -117,6 +125,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         website: '',
         whatsapp: '',
         footerMessage: 'Gracias por su preferencia.',
+        adminPin: '1234', // Default PIN
         // Default Distribution Rules
         distributionRules: [
             { id: '1', name: 'Reinversión', percentage: 40, color: 'text-blue-500' },
@@ -130,6 +139,10 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // Ensure distribution rules exist if loading old data
         if (!parsed.distributionRules) {
             parsed.distributionRules = defaultSettings.distributionRules;
+        }
+        // Ensure adminPin exists if loading old data
+        if (!parsed.adminPin) {
+            parsed.adminPin = '1234';
         }
         return parsed;
     }
@@ -173,6 +186,18 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   
   useEffect(() => localStorage.setItem('serviceOrders', JSON.stringify(serviceOrders)), [serviceOrders]);
 
+  // --- Auth Actions ---
+  const login = (pin: string) => {
+      if (pin === businessSettings.adminPin) {
+          setIsAuthenticated(true);
+          return true;
+      }
+      return false;
+  };
+
+  const logout = () => {
+      setIsAuthenticated(false);
+  };
 
   const addStation = (station: Station) => setStations([...stations, station]);
 
@@ -534,6 +559,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       stations, products, tariffs, sales, expenses, customers, businessSettings,
       streamingAccounts, streamingPlatforms, streamingDistributors,
       serviceOrders,
+      isAuthenticated, login, logout,
       addStation, updateStation, updateStationStatus, addOrderToSession, endSession, deleteStation,
       addProduct, updateProductStock, deleteProduct, recordSale, updateSale, deleteSale, addExpense, updateExpense, deleteExpense, addTariff, updateTariff, deleteTariff,
       addCustomer, updateCustomerPoints, updateBusinessSettings,

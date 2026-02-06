@@ -1,11 +1,11 @@
 import React from 'react';
-import { LayoutDashboard, ShoppingCart, Package, Settings, Ghost, Receipt, Tv, Wrench, PieChart, Download } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Settings, Ghost, Receipt, Tv, Wrench, PieChart, Download, LogOut } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCyber } from '../context/CyberContext';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { exportDatabase } = useCyber();
+  const { exportDatabase, logout } = useCyber();
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
@@ -54,6 +54,13 @@ const Sidebar: React.FC = () => {
             className="w-full flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-emerald-600/20 hover:text-emerald-400 text-slate-400 rounded-lg transition-all text-sm font-medium border border-transparent hover:border-emerald-500/30"
         >
             <Download className="w-4 h-4" /> Guardar Respaldo
+        </button>
+
+        <button 
+            onClick={logout}
+            className="w-full flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-rose-600/20 hover:text-rose-400 text-slate-400 rounded-lg transition-all text-sm font-medium border border-transparent hover:border-rose-500/30"
+        >
+            <LogOut className="w-4 h-4" /> Cerrar Sesión
         </button>
 
         <div className="bg-slate-900/50 rounded-lg p-3">

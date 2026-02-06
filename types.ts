@@ -68,6 +68,10 @@ export interface Station {
   type: DeviceType;
   status: StationStatus;
   currentSession?: Session;
+  // New hardware specs fields
+  specs?: string;     // e.g. "Ryzen 5, RTX 3060"
+  monitor?: string;   // e.g. "24' 144Hz"
+  tariffId?: string;  // Specific tariff ID override
 }
 
 export interface Product {
@@ -226,7 +230,8 @@ export interface BusinessSettings {
   website: string;
   whatsapp: string;
   footerMessage?: string;
-  distributionRules?: DistributionRule[]; // New field
+  distributionRules?: DistributionRule[];
+  adminPin: string; // NEW: PIN for login
 }
 
 // --- BACKUP DATA STRUCTURE ---
