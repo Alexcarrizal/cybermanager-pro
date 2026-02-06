@@ -12,12 +12,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose }) => {
   const { addProduct, products } = useCyber();
   
   // Get unique existing values for autocomplete suggestions
-  const existingCategories = Array.from(new Set(products.map(p => p.category))).sort();
+  const existingCategories = Array.from(new Set(products.map(p => p.category)));
   const existingDistributors = Array.from(new Set(products.map(p => p.distributor).filter(Boolean) as string[])).sort();
 
   // Default hardcoded categories to ensure they always appear as suggestions
-  const defaultCategories = ['Botanas', 'Bebidas', 'Accesorios', 'Servicios', 'Papelería'];
-  const allCategorySuggestions = Array.from(new Set([...defaultCategories, ...existingCategories]));
+  const defaultCategories = ['Accesorios', 'Bebidas', 'Botanas', 'Papelería', 'Servicios'];
+  
+  // Combine and Sort Alphabetically
+  const allCategorySuggestions = Array.from(new Set([...defaultCategories, ...existingCategories])).sort((a, b) => a.localeCompare(b));
+
+  const warrantyOptions = ["1 Mes", "3 Meses", "6 Meses", "1 Año"];
 
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
@@ -163,13 +167,21 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose }) => {
                     <span className="text-slate-300 text-sm">Este producto tiene garantía</span>
                  </label>
                  {formData.hasWarranty && (
-                    <input 
-                      type="text" 
-                      value={formData.warrantyPeriod}
-                      onChange={e => handleChange('warrantyPeriod', e.target.value)}
-                      className="mt-2 w-full bg-slate-700/50 border border-slate-600 rounded-lg p-2 text-white text-sm"
-                      placeholder="Periodo (ej. 12 meses)"
-                    />
+                    <>
+                        <input 
+                        list="warranty-options"
+                        type="text" 
+                        value={formData.warrantyPeriod}
+                        onChange={e => handleChange('warrantyPeriod', e.target.value)}
+                        className="mt-2 w-full bg-slate-700/50 border border-slate-600 rounded-lg p-2 text-white text-sm focus:border-blue-500 outline-none"
+                        placeholder="Seleccione o escriba periodo"
+                        />
+                        <datalist id="warranty-options">
+                            {warrantyOptions.map(opt => (
+                                <option key={opt} value={opt} />
+                            ))}
+                        </datalist>
+                    </>
                  )}
               </div>
             </div>
