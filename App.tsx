@@ -9,6 +9,7 @@ import CashRegister from './components/CashRegister';
 import StreamingManager from './components/StreamingManager';
 import ServiceOrdersManager from './components/ServiceOrdersManager';
 import Distribution from './components/Distribution';
+import Deposits from './components/Deposits';
 import LoginScreen from './components/LoginScreen';
 import { CyberProvider, useCyber } from './context/CyberContext';
 
@@ -29,6 +30,7 @@ const MainApp: React.FC = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/caja" element={<CashRegister />} />
             <Route path="/distribution" element={<Distribution />} />
+            <Route path="/deposits" element={<Deposits />} />
             <Route path="/streaming" element={<StreamingManager />} />
             <Route path="/service-orders" element={<ServiceOrdersManager />} />
             <Route path="/pos" element={<POS />} />

@@ -233,6 +233,12 @@ export interface BusinessSettings {
   footerMessage?: string;
   distributionRules?: DistributionRule[];
   adminPin: string; // NEW: PIN for login
+  depositDestinations?: { // NEW: Custom names for deposit cards
+    pending: string;
+    savings: string;
+    cogs: string;
+    cash: string;
+  };
 }
 
 // --- BACKUP DATA STRUCTURE ---

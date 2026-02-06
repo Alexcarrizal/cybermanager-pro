@@ -15,7 +15,13 @@ const DEFAULT_SETTINGS: BusinessSettings = {
         { id: '1', name: 'Reinversión', percentage: 40, color: 'text-blue-500' },
         { id: '2', name: 'Sueldos / Ganancia', percentage: 30, color: 'text-emerald-500' },
         { id: '3', name: 'Fondo de Ahorro', percentage: 30, color: 'text-purple-500' }
-    ]
+    ],
+    depositDestinations: {
+        pending: 'Cuenta Bancaria Principal',
+        savings: 'Cuenta de Ahorro / Inversión',
+        cogs: 'Cuenta de Recompra',
+        cash: 'Caja Chica / Efectivo'
+    }
 };
 
 interface CyberContextType {

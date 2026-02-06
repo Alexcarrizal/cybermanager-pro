@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ShoppingCart, Package, Settings, Ghost, Receipt, Tv, Wrench, PieChart, Download, LogOut } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Settings, Ghost, Receipt, Tv, Wrench, PieChart, Download, LogOut, Wallet } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCyber } from '../context/CyberContext';
 
@@ -15,6 +15,7 @@ const Sidebar: React.FC = () => {
     { path: '/service-orders', label: 'Ordenes de Servicio', icon: Wrench },
     { path: '/streaming', label: 'Streaming', icon: Tv },
     { path: '/distribution', label: 'Distribución', icon: PieChart },
+    { path: '/deposits', label: 'Depósitos', icon: Wallet },
     { path: '/caja', label: 'Caja', icon: Receipt },
     { path: '/settings', label: 'Configuración', icon: Settings },
   ];
