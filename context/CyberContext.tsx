@@ -555,36 +555,21 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const resetDatabase = () => {
-      // 1. Force Clear LocalStorage Keys immediately to ensure no race conditions with state persistence
-      const keys = ['stations', 'products', 'tariffs', 'sales', 'expenses', 'customers', 'businessSettings', 'streamingAccounts', 'streamingPlatforms', 'streamingDistributors', 'serviceOrders'];
-      keys.forEach(k => localStorage.removeItem(k));
+      // 1. Wipe everything from LocalStorage
+      localStorage.clear();
 
-      // 2. Set State to Initials (Visual feedback before reload)
-      setStations(INITIAL_STATIONS);
-      setProducts(INITIAL_PRODUCTS);
-      setTariffs(INITIAL_TARIFFS);
-      setSales(INITIAL_SALES);
-      setExpenses(INITIAL_EXPENSES);
-      setCustomers(INITIAL_CUSTOMERS);
-      setBusinessSettings({
-        name: 'Mi Ciber',
-        address: 'Dirección del Local',
-        website: '',
-        whatsapp: '',
-        footerMessage: 'Gracias por su preferencia.',
-        adminPin: '1234',
-        distributionRules: [
-            { id: '1', name: 'Reinversión', percentage: 40, color: 'text-blue-500' },
-            { id: '2', name: 'Sueldos / Ganancia', percentage: 30, color: 'text-emerald-500' },
-            { id: '3', name: 'Fondo de Ahorro', percentage: 30, color: 'text-purple-500' }
-        ]
-      });
-      setStreamingAccounts(INITIAL_STREAMING_ACCOUNTS);
-      setStreamingPlatforms(INITIAL_PLATFORMS);
-      setStreamingDistributors(INITIAL_DISTRIBUTORS);
-      setServiceOrders(INITIAL_SERVICE_ORDERS);
-      
-      // 3. Reload to clear memory and re-initialize from empty storage
+      // 2. Explicitly write empty arrays to keys to prevent any ghost data on reload
+      localStorage.setItem('sales', '[]');
+      localStorage.setItem('stations', '[]');
+      localStorage.setItem('products', '[]');
+      localStorage.setItem('tariffs', '[]');
+      localStorage.setItem('expenses', '[]');
+      localStorage.setItem('customers', JSON.stringify(INITIAL_CUSTOMERS));
+      localStorage.setItem('streamingAccounts', '[]');
+      localStorage.setItem('serviceOrders', '[]');
+
+      // 3. Force reload. 
+      // Do NOT set state here, as it might trigger useEffects that write back current (dirty) state before reload.
       window.location.reload();
   };
 
