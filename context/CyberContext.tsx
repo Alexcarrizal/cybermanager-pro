@@ -12,6 +12,7 @@ import {
   INITIAL_SALES,
   INITIAL_EXPENSES
 } from '../constants';
+import * as XLSX from 'xlsx';
 
 interface CyberContextType {
   stations: Station[];
@@ -71,6 +72,7 @@ interface CyberContextType {
 
   // Database Management
   importDatabase: (data: DatabaseBackup) => void;
+  exportDatabase: () => void;
 }
 
 const CyberContext = createContext<CyberContextType | undefined>(undefined);
@@ -232,7 +234,10 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const durationMs = Date.now() - session.startTime;
         const totalMinutes = Math.ceil(durationMs / (1000 * 60));
         
-        const tariff = tariffs.find(t => t.deviceType === station.type) || tariffs[0];
+        // Find Tariff: Priority to specific tariffId, fallback to deviceType
+        const specificTariff = station.tariffId ? tariffs.find(t => t.id === station.tariffId) : undefined;
+        const typeTariff = tariffs.find(t => t.deviceType === station.type);
+        const tariff = specificTariff || typeTariff || tariffs[0];
         
         if (tariff) {
             const hourlyRule = tariff.ranges.find(r => r.maxMinutes === 60) || tariff.ranges[tariff.ranges.length - 1];
@@ -450,7 +455,8 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setServiceOrders(prev => prev.filter(o => o.id !== id));
   };
 
-  // --- IMPORT DATABASE ---
+  // --- IMPORT/EXPORT DATABASE ---
+  
   const importDatabase = (data: DatabaseBackup) => {
       if (data.products) setProducts(data.products);
       if (data.sales) setSales(data.sales);
@@ -463,6 +469,63 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (data.streamingDistributors) setStreamingDistributors(data.streamingDistributors);
       if (data.serviceOrders) setServiceOrders(data.serviceOrders);
       if (data.stations) setStations(data.stations);
+  };
+
+  const exportDatabase = () => {
+      const wb = XLSX.utils.book_new();
+
+      // 1. Business Info (Flattened)
+      const businessData = [{
+          name: businessSettings.name,
+          address: businessSettings.address,
+          website: businessSettings.website,
+          whatsapp: businessSettings.whatsapp,
+          footerMessage: businessSettings.footerMessage,
+          distributionRules: JSON.stringify(businessSettings.distributionRules) // Flatten complex object
+      }];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(businessData), "Resumen");
+
+      // 2. Sales (Flatten nested items)
+      const salesData = sales.map(s => ({
+          ...s,
+          items: JSON.stringify(s.items) // Convert array to string for Excel
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesData), "Ventas");
+
+      // 3. Products
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(products), "Productos");
+
+      // 4. Expenses
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenses), "Gastos");
+
+      // 5. Customers
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customers), "Clientes");
+
+      // 6. Tariffs (Flatten ranges)
+      const tariffsData = tariffs.map(t => ({
+          ...t,
+          ranges: JSON.stringify(t.ranges)
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(tariffsData), "Tarifas");
+
+      // 7. Stations (Flatten currentSession)
+      const stationsData = stations.map(s => ({
+          ...s,
+          currentSession: s.currentSession ? JSON.stringify(s.currentSession) : ''
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stationsData), "Estaciones");
+
+      // 8. Streaming
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(streamingAccounts), "CuentasStreaming");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(streamingPlatforms), "Plataformas");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(streamingDistributors), "Distribuidores");
+
+      // 9. Service Orders
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(serviceOrders), "Reparaciones");
+
+      // Write file
+      const dateStr = new Date().toISOString().slice(0,10);
+      XLSX.writeFile(wb, `CyberManager_Respaldo_${dateStr}.xlsx`);
   };
 
 
@@ -478,7 +541,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       addStreamingPlatform, updateStreamingPlatform, deleteStreamingPlatform,
       addStreamingDistributor, updateStreamingDistributor, deleteStreamingDistributor,
       addServiceOrder, updateServiceOrder, deleteServiceOrder,
-      importDatabase
+      importDatabase, exportDatabase
     }}>
       {children}
     </CyberContext.Provider>

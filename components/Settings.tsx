@@ -8,10 +8,7 @@ const Settings: React.FC = () => {
   const { 
       tariffs, updateTariff, addTariff, deleteTariff, 
       businessSettings, updateBusinessSettings,
-      // Data needed for backup
-      products, sales, expenses, customers, streamingAccounts, 
-      streamingPlatforms, streamingDistributors, serviceOrders, stations,
-      importDatabase
+      importDatabase, exportDatabase
   } = useCyber();
 
   const [localTariffs, setLocalTariffs] = useState<Tariff[]>([]);
@@ -172,64 +169,6 @@ const Settings: React.FC = () => {
       alert('Información del negocio actualizada.');
   };
 
-  // --- EXPORT TO EXCEL ---
-  const handleExport = () => {
-      const wb = XLSX.utils.book_new();
-
-      // 1. Business Info (Flattened)
-      const businessData = [{
-          name: businessSettings.name,
-          address: businessSettings.address,
-          website: businessSettings.website,
-          whatsapp: businessSettings.whatsapp,
-          footerMessage: businessSettings.footerMessage,
-          distributionRules: JSON.stringify(businessSettings.distributionRules) // Flatten complex object
-      }];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(businessData), "Resumen");
-
-      // 2. Sales (Flatten nested items)
-      const salesData = sales.map(s => ({
-          ...s,
-          items: JSON.stringify(s.items) // Convert array to string for Excel
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesData), "Ventas");
-
-      // 3. Products
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(products), "Productos");
-
-      // 4. Expenses
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenses), "Gastos");
-
-      // 5. Customers
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customers), "Clientes");
-
-      // 6. Tariffs (Flatten ranges)
-      const tariffsData = tariffs.map(t => ({
-          ...t,
-          ranges: JSON.stringify(t.ranges)
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(tariffsData), "Tarifas");
-
-      // 7. Stations (Flatten currentSession)
-      const stationsData = stations.map(s => ({
-          ...s,
-          currentSession: s.currentSession ? JSON.stringify(s.currentSession) : ''
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stationsData), "Estaciones");
-
-      // 8. Streaming
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(streamingAccounts), "CuentasStreaming");
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(streamingPlatforms), "Plataformas");
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(streamingDistributors), "Distribuidores");
-
-      // 9. Service Orders
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(serviceOrders), "Reparaciones");
-
-      // Write file
-      const dateStr = new Date().toISOString().slice(0,10);
-      XLSX.writeFile(wb, `CyberManager_Respaldo_${dateStr}.xlsx`);
-  };
-
   // --- IMPORT FROM EXCEL ---
   const handleImportClick = () => {
       if (fileInputRef.current) {
@@ -342,7 +281,7 @@ const Settings: React.FC = () => {
            </div>
            <div className="flex flex-col md:flex-row gap-4">
                <button 
-                  onClick={handleExport}
+                  onClick={exportDatabase}
                   className="flex-1 py-4 bg-emerald-700/20 border border-emerald-500/50 hover:bg-emerald-700/40 text-emerald-400 rounded-xl font-bold flex flex-col items-center justify-center gap-2 transition-all group"
                >
                    <Download className="w-8 h-8 group-hover:-translate-y-1 transition-transform" />
