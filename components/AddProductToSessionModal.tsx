@@ -106,8 +106,8 @@ const AddProductToSessionModal: React.FC<Props> = ({ station, onClose }) => {
                                     <p className="font-bold text-white">{product.name}</p>
                                     <p className="text-xs text-slate-400">${product.price.toFixed(2)}</p>
                                 </div>
-                                <div className={`px-2 py-1 rounded text-xs font-bold ${product.stock > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                                    {product.category === 'SERVICE' ? 'Inf.' : `${product.stock} disp.`}
+                                <div className={`px-2 py-1 rounded text-xs font-bold ${!product.trackStock || product.stock > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                                    {!product.trackStock ? 'Inf.' : `${product.stock} disp.`}
                                 </div>
                             </button>
                         ))}

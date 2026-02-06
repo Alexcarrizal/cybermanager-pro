@@ -183,7 +183,7 @@ const Inventory: React.FC = () => {
                                 <div className="text-slate-500 text-xs">{margin.toFixed(1)}% margen</div>
                             </td>
                             <td className="px-6 py-4">
-                                {categoryLabel(p.category) === 'Servicios' || p.category === 'SERVICE' ? (
+                                {!p.trackStock ? (
                                     <span className="text-slate-500 text-sm italic">Infinito</span>
                                 ) : (
                                     <span className={`text-sm font-medium ${p.stock < 5 ? 'text-orange-400' : 'text-slate-300'}`}>

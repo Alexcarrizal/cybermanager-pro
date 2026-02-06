@@ -235,7 +235,7 @@ const POS: React.FC = () => {
                         <button
                             key={product.id}
                             onClick={() => addToCart(product)}
-                            disabled={product.stock <= 0 && product.category !== 'SERVICE' && product.category !== 'Servicios'}
+                            disabled={product.trackStock && product.stock <= 0}
                             className="min-w-[160px] max-w-[160px] bg-slate-800 border border-slate-700 p-3 rounded-xl relative hover:border-orange-500/50 hover:bg-slate-700/50 transition-all group flex flex-col items-start text-left shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {/* Rank Badge */}
@@ -257,7 +257,7 @@ const POS: React.FC = () => {
                             <div className="mt-auto w-full">
                                 <span className="font-bold text-emerald-400 text-sm">${product.price}</span>
                                 <p className="text-[10px] text-slate-500 mt-0.5">
-                                    {(product.category === 'SERVICE' || product.category === 'Servicios') ? 'Infinito' : `${product.stock} disp.`}
+                                    {!product.trackStock ? 'Infinito' : `${product.stock} disp.`}
                                 </p>
                             </div>
                         </button>
@@ -276,7 +276,7 @@ const POS: React.FC = () => {
             <button
               key={product.id}
               onClick={() => addToCart(product)}
-              disabled={product.stock <= 0 && product.category !== 'SERVICE' && product.category !== 'Servicios'}
+              disabled={product.trackStock && product.stock <= 0}
               className="group bg-slate-800 p-4 rounded-xl border border-slate-700 hover:border-blue-500 text-left transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <div className="flex justify-between items-start mb-2">
@@ -286,7 +286,7 @@ const POS: React.FC = () => {
                 <span className="font-bold text-emerald-400 bg-emerald-950/30 px-2 py-0.5 rounded text-sm">${product.price}</span>
               </div>
               <h3 className="font-medium text-slate-200 line-clamp-1">{product.name}</h3>
-              <p className="text-sm text-slate-500 mt-1">Stock: {(product.category === 'SERVICE' || product.category === 'Servicios') ? '∞' : product.stock}</p>
+              <p className="text-sm text-slate-500 mt-1">Stock: {!product.trackStock ? '∞' : product.stock}</p>
             </button>
           ))}
         </div>
