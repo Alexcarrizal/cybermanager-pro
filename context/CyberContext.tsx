@@ -555,6 +555,11 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const resetDatabase = () => {
+      // 1. Force Clear LocalStorage Keys immediately to ensure no race conditions with state persistence
+      const keys = ['stations', 'products', 'tariffs', 'sales', 'expenses', 'customers', 'businessSettings', 'streamingAccounts', 'streamingPlatforms', 'streamingDistributors', 'serviceOrders'];
+      keys.forEach(k => localStorage.removeItem(k));
+
+      // 2. Set State to Initials (Visual feedback before reload)
       setStations(INITIAL_STATIONS);
       setProducts(INITIAL_PRODUCTS);
       setTariffs(INITIAL_TARIFFS);
@@ -579,8 +584,8 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setStreamingDistributors(INITIAL_DISTRIBUTORS);
       setServiceOrders(INITIAL_SERVICE_ORDERS);
       
-      // Reload to ensure clear state
-      setTimeout(() => window.location.reload(), 500); 
+      // 3. Reload to clear memory and re-initialize from empty storage
+      window.location.reload();
   };
 
 
