@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCyber } from '../context/CyberContext';
 import { Customer, StreamingPlatform, StreamingAccount } from '../types';
-import { X, PlayCircle, Plus, Calendar, Eye, Send, Save, EyeOff } from 'lucide-react';
+import { X, PlayCircle, Plus, Calendar, Eye, Send, Save, EyeOff, Clock } from 'lucide-react';
 
 interface Props {
     onClose: () => void;
@@ -22,13 +22,16 @@ const StreamingSaleModal: React.FC<Props> = ({ onClose, accountToEdit }) => {
     const [profileName, setProfileName] = useState('');
     const [pin, setPin] = useState('');
     
+    // Expiration Logic
+    const [expirationMode, setExpirationMode] = useState<'DURATION' | 'MANUAL'>('DURATION');
     const [duration, setDuration] = useState(30); // days
+    const [manualDate, setManualDate] = useState(''); // YYYY-MM-DD
+    
     const [price, setPrice] = useState(0);
     const [cost, setCost] = useState(0);
     
     const [isAdult, setIsAdult] = useState(false);
     const [isTrial, setIsTrial] = useState(false);
-    const [customExpDate, setCustomExpDate] = useState('');
     
     // UI States
     const [showPassword, setShowPassword] = useState(false);
@@ -45,17 +48,26 @@ const StreamingSaleModal: React.FC<Props> = ({ onClose, accountToEdit }) => {
             setAccountPassword(accountToEdit.accountPassword || '');
             setProfileName(accountToEdit.profileName || '');
             setPin(accountToEdit.pin || '');
+            
             setDuration(accountToEdit.durationDays);
+            setExpirationMode('DURATION'); 
+            
+            const expDate = new Date(accountToEdit.expirationDate);
+            setManualDate(expDate.toISOString().split('T')[0]);
+
             setPrice(accountToEdit.price);
             setCost(accountToEdit.cost);
             setIsAdult(accountToEdit.isAdult);
             setIsTrial(accountToEdit.isTrial);
-            // We don't set customExpDate back from timestamp for simplicity in this demo, 
-            // but duration logic handles the math.
+        } else {
+             // Set manual date default to 30 days from now
+             const d = new Date();
+             d.setDate(d.getDate() + 30);
+             setManualDate(d.toISOString().split('T')[0]);
         }
     }, [accountToEdit]);
 
-    // Pre-fill price when platform changes (only if NOT editing to avoid overwriting custom prices)
+    // Pre-fill price when platform changes
     useEffect(() => {
         if (!accountToEdit) {
             const plat = streamingPlatforms.find(p => p.id === platformId);
@@ -66,14 +78,19 @@ const StreamingSaleModal: React.FC<Props> = ({ onClose, accountToEdit }) => {
         }
     }, [platformId, streamingPlatforms, accountToEdit]);
 
-    // Calculate expiration
-    const calculateExpDate = () => {
-        const d = new Date();
-        // If editing, we might want to preserve original purchase date logic, 
-        // but typically editing means "fixing data". If renewing, it's a new sale usually.
-        // For display purposes:
-        d.setDate(d.getDate() + duration);
-        return d.toLocaleDateString('es-ES'); 
+    // Calculate expiration display
+    const calculateExpDateDisplay = () => {
+        if (expirationMode === 'MANUAL') {
+             if (!manualDate) return 'Seleccione fecha';
+             const parts = manualDate.split('-');
+             // Note: Date input gives YYYY-MM-DD. Date constructor expects month 0-indexed.
+             const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
+             return d.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        } else {
+             const d = new Date();
+             d.setDate(d.getDate() + duration);
+             return d.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
     };
 
     const handleAction = () => {
@@ -106,17 +123,25 @@ const StreamingSaleModal: React.FC<Props> = ({ onClose, accountToEdit }) => {
         }
         
         // Expiration Logic
-        let expTimestamp = Date.now() + (duration * 24 * 60 * 60 * 1000);
-        if (customExpDate) {
-            const parts = customExpDate.split('-');
-            const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
-            d.setHours(23, 59, 59);
-            expTimestamp = d.getTime();
+        let expTimestamp = 0;
+        let finalDuration = duration;
+
+        if (expirationMode === 'MANUAL') {
+             if (!manualDate) return alert("Seleccione una fecha de vencimiento");
+             const parts = manualDate.split('-');
+             const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
+             d.setHours(23, 59, 59); // End of that day
+             expTimestamp = d.getTime();
+             
+             // Recalculate duration days roughly
+             const diff = expTimestamp - Date.now();
+             finalDuration = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        } else {
+             expTimestamp = Date.now() + (duration * 24 * 60 * 60 * 1000);
+             finalDuration = duration;
         }
         
-        // Preserve original Purchase Date if editing
         const purchaseDate = accountToEdit ? accountToEdit.purchaseDate : Date.now();
-        // Use existing ID if editing
         const id = accountToEdit ? accountToEdit.id : Date.now().toString();
 
         const accountData: StreamingAccount = {
@@ -130,7 +155,7 @@ const StreamingSaleModal: React.FC<Props> = ({ onClose, accountToEdit }) => {
             profileName,
             pin,
             purchaseDate,
-            durationDays: duration,
+            durationDays: finalDuration,
             expirationDate: expTimestamp,
             price: Number(price),
             cost: Number(cost),
@@ -145,7 +170,6 @@ const StreamingSaleModal: React.FC<Props> = ({ onClose, accountToEdit }) => {
             addStreamingAccount(accountData);
         }
 
-        // WhatsApp Logic
         if (sendWhatsApp && customerPhone) {
             const platformName = streamingPlatforms.find(p => p.id === platformId)?.name || 'Streaming';
             const expDateFormatted = new Date(expTimestamp).toLocaleDateString('es-ES');
@@ -172,7 +196,6 @@ Gracias por tu preferencia!`;
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-slate-900 w-full max-w-4xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 
-                {/* Header */}
                 <div className="bg-blue-600 p-5 flex justify-between items-center">
                     <div>
                         <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -190,72 +213,108 @@ Gracias por tu preferencia!`;
 
                 <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-900">
                     
-                    {/* Left Column: Customer Info */}
-                    <div className="space-y-4">
-                        <h3 className="text-white font-bold border-b border-slate-700 pb-2">Información del Cliente</h3>
-                        
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Nombre Completo *</label>
-                            <div className="relative">
-                                <input 
-                                    list="customer-list"
-                                    placeholder="Nombre del cliente"
-                                    value={customerName}
-                                    onChange={(e) => {
-                                        setCustomerName(e.target.value);
-                                        const found = customers.find(c => c.name === e.target.value);
-                                        if (found) {
-                                            setCustomerId(found.id);
-                                            setCustomerPhone(found.phone || '');
-                                        }
-                                    }}
-                                    className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 pl-10 text-white outline-none focus:border-blue-500"
-                                />
-                                <datalist id="customer-list">
-                                    {customers.map(c => <option key={c.id} value={c.name} />)}
-                                </datalist>
-                                <span className="absolute left-3 top-3 text-slate-500">👤</span>
+                    {/* Left Column: Customer & Expiration */}
+                    <div className="space-y-5">
+                        <div className="space-y-4">
+                            <h3 className="text-white font-bold border-b border-slate-700 pb-2">Cliente</h3>
+                            <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1">Nombre Completo *</label>
+                                <div className="relative">
+                                    <input 
+                                        list="customer-list"
+                                        placeholder="Buscar o escribir nombre"
+                                        value={customerName}
+                                        onChange={(e) => {
+                                            setCustomerName(e.target.value);
+                                            const found = customers.find(c => c.name === e.target.value);
+                                            if (found) {
+                                                setCustomerId(found.id);
+                                                setCustomerPhone(found.phone || '');
+                                            }
+                                        }}
+                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 pl-9 text-white outline-none focus:border-blue-500 text-sm"
+                                    />
+                                    <datalist id="customer-list">
+                                        {customers.map(c => <option key={c.id} value={c.name} />)}
+                                    </datalist>
+                                    <span className="absolute left-3 top-2.5 text-slate-500">👤</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-400 mb-1">Teléfono</label>
+                                <div className="relative">
+                                    <input 
+                                        placeholder="55 1234 5678"
+                                        value={customerPhone}
+                                        onChange={(e) => setCustomerPhone(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 pl-9 text-white outline-none focus:border-blue-500 text-sm"
+                                    />
+                                    <span className="absolute left-3 top-2.5 text-slate-500">📞</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Teléfono *</label>
-                            <div className="relative">
-                                <input 
-                                    placeholder="55 1234 5678"
-                                    value={customerPhone}
-                                    onChange={(e) => setCustomerPhone(e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 pl-10 text-white outline-none focus:border-blue-500"
-                                />
-                                <span className="absolute left-3 top-3 text-slate-500">📞</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Vencimiento *</label>
-                            <div className="bg-slate-800 rounded-lg p-1 flex mb-2 border border-slate-700">
-                                <button className="flex-1 py-1 bg-blue-600 text-white text-xs font-bold rounded">Por Duración</button>
-                                {/* Future: Implement manual date picker toggle */}
-                            </div>
-                            <select 
-                                value={duration}
-                                onChange={(e) => setDuration(Number(e.target.value))}
-                                className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white outline-none mb-2"
-                            >
-                                <option value={30}>1 mes (30 días)</option>
-                                <option value={60}>2 meses (60 días)</option>
-                                <option value={90}>3 meses (90 días)</option>
-                                <option value={180}>6 meses</option>
-                                <option value={365}>1 año</option>
-                            </select>
+                        <div className="space-y-4 pt-2">
+                            <h3 className="text-white font-bold border-b border-slate-700 pb-2">Vencimiento</h3>
                             
-                            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
-                                <p className="text-xs text-blue-200">Fecha de vencimiento:</p>
-                                <p className="text-lg font-bold text-blue-400">
-                                    {accountToEdit 
-                                        ? new Date(accountToEdit.expirationDate).toLocaleDateString('es-ES') 
-                                        : calculateExpDate()
-                                    }
+                            {/* Toggle Buttons */}
+                            <div className="flex gap-2 bg-slate-800 p-1 rounded-lg border border-slate-700">
+                                <button 
+                                    onClick={() => setExpirationMode('DURATION')}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${
+                                        expirationMode === 'DURATION' 
+                                        ? 'bg-blue-600 text-white shadow-md' 
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                    }`}
+                                >
+                                    <Clock className="w-3 h-3" />
+                                    Por Duración
+                                </button>
+                                <button 
+                                    onClick={() => setExpirationMode('MANUAL')}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-2 ${
+                                        expirationMode === 'MANUAL' 
+                                        ? 'bg-blue-600 text-white shadow-md' 
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                    }`}
+                                >
+                                    <Calendar className="w-3 h-3" />
+                                    Fecha Manual
+                                </button>
+                            </div>
+
+                            {expirationMode === 'DURATION' ? (
+                                <div>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1">Seleccionar Periodo</label>
+                                    <select 
+                                        value={duration}
+                                        onChange={(e) => setDuration(Number(e.target.value))}
+                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white outline-none text-sm"
+                                    >
+                                        <option value={30}>1 mes (30 días)</option>
+                                        <option value={60}>2 meses (60 días)</option>
+                                        <option value={90}>3 meses (90 días)</option>
+                                        <option value={180}>6 meses</option>
+                                        <option value={365}>1 año</option>
+                                    </select>
+                                </div>
+                            ) : (
+                                <div>
+                                     <label className="block text-xs font-medium text-slate-400 mb-1">Fecha de Corte</label>
+                                     <input 
+                                        type="date"
+                                        value={manualDate}
+                                        onChange={(e) => setManualDate(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white outline-none text-sm"
+                                     />
+                                </div>
+                            )}
+                            
+                            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 text-center">
+                                <p className="text-xs text-blue-300 mb-1">La cuenta vencerá el:</p>
+                                <p className="text-sm font-bold text-blue-100 capitalize">
+                                    {calculateExpDateDisplay()}
                                 </p>
                             </div>
                         </div>
@@ -267,16 +326,16 @@ Gracias por tu preferencia!`;
                              <h3 className="text-white font-bold">Datos de la Cuenta</h3>
                         </div>
 
-                        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Plataforma *</label>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1">Plataforma *</label>
                                     <select 
                                         value={platformId}
                                         onChange={(e) => setPlatformId(e.target.value)}
-                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
+                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white outline-none focus:border-blue-500 text-sm"
                                     >
-                                        <option value="">Seleccionar plataforma</option>
+                                        <option value="">Seleccionar plataforma...</option>
                                         {streamingPlatforms.map(p => (
                                             <option key={p.id} value={p.id}>{p.name} - ${p.suggestedPrice}</option>
                                         ))}
@@ -284,29 +343,29 @@ Gracias por tu preferencia!`;
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Usuario/Email de la Cuenta *</label>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1">Usuario / Email de Acceso *</label>
                                     <input 
                                         type="email"
-                                        placeholder="usuario@email.com"
+                                        placeholder="cliente@ejemplo.com"
                                         value={accountEmail}
                                         onChange={(e) => setAccountEmail(e.target.value)}
-                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
+                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white outline-none focus:border-blue-500 text-sm font-mono"
                                     />
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Contraseña *</label>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1">Contraseña *</label>
                                     <div className="relative">
                                         <input 
                                             type={showPassword ? "text" : "password"}
-                                            placeholder="Contraseña de la cuenta"
+                                            placeholder="Contraseña"
                                             value={accountPassword}
                                             onChange={(e) => setAccountPassword(e.target.value)}
-                                            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
+                                            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white outline-none focus:border-blue-500 text-sm font-mono"
                                         />
                                         <button 
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-3.5 text-slate-500 hover:text-white"
+                                            className="absolute right-3 top-2.5 text-slate-500 hover:text-white"
                                             type="button"
                                         >
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -315,68 +374,68 @@ Gracias por tu preferencia!`;
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Nombre del Perfil (Opcional)</label>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1">Perfil (Opcional)</label>
                                     <div className="relative">
                                         <input 
-                                            placeholder="Perfil del cliente"
+                                            placeholder="Ej. Pantalla 1"
                                             value={profileName}
                                             onChange={(e) => setProfileName(e.target.value)}
-                                            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 pl-9 text-white outline-none"
+                                            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 pl-9 text-white outline-none text-sm"
                                         />
-                                        <span className="absolute left-3 top-3 text-slate-500">👤</span>
+                                        <span className="absolute left-3 top-2.5 text-slate-500">👤</span>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">PIN del Perfil (Opcional)</label>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1">PIN (Opcional)</label>
                                     <div className="relative">
                                         <input 
-                                            placeholder="1234"
+                                            placeholder="Ej. 1234"
                                             value={pin}
                                             onChange={(e) => setPin(e.target.value)}
-                                            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 pl-9 text-white outline-none"
+                                            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 pl-9 text-white outline-none text-sm"
                                         />
-                                        <span className="absolute left-3 top-3 text-slate-500">🔑</span>
+                                        <span className="absolute left-3 top-2.5 text-slate-500">🔑</span>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Precio de Venta *</label>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1">Precio de Venta ($)</label>
                                     <input 
                                         type="number"
                                         value={price}
                                         onChange={(e) => setPrice(Number(e.target.value))}
-                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
+                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white outline-none focus:border-blue-500 text-sm"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Costo de la Cuenta</label>
+                                    <label className="block text-xs font-medium text-slate-400 mb-1">Costo de Inversión ($)</label>
                                     <input 
                                         type="number"
                                         value={cost}
                                         onChange={(e) => setCost(Number(e.target.value))}
-                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-3 text-white outline-none focus:border-blue-500"
+                                        className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-white outline-none focus:border-blue-500 text-sm"
                                     />
                                 </div>
                                 
-                                <div className="md:col-span-2 flex gap-6 pt-2">
+                                <div className="md:col-span-2 flex gap-6 pt-2 border-t border-slate-700/50 mt-2">
                                      <label className="flex items-center gap-2 cursor-pointer">
                                         <input 
                                             type="checkbox" 
                                             checked={isAdult}
                                             onChange={(e) => setIsAdult(e.target.checked)}
-                                            className="w-4 h-4"
+                                            className="w-4 h-4 rounded bg-slate-700 border-slate-600"
                                         />
-                                        <span className="text-white text-sm">Contenido para adultos</span>
+                                        <span className="text-slate-300 text-xs">Contenido para adultos (+18)</span>
                                      </label>
                                      <label className="flex items-center gap-2 cursor-pointer">
                                         <input 
                                             type="checkbox" 
                                             checked={isTrial}
                                             onChange={(e) => setIsTrial(e.target.checked)}
-                                            className="w-4 h-4"
+                                            className="w-4 h-4 rounded bg-slate-700 border-slate-600"
                                         />
-                                        <span className="text-white text-sm">Activar período de prueba</span>
+                                        <span className="text-slate-300 text-xs">Es cuenta de prueba (Demo)</span>
                                      </label>
                                 </div>
                             </div>
@@ -385,10 +444,8 @@ Gracias por tu preferencia!`;
                     </div>
                 </div>
 
-                {/* Footer */}
                 <div className="p-5 border-t border-slate-700 bg-slate-800 flex justify-between items-center">
                     <div>
-                         {/* WhatsApp Checkbox */}
                          <label className="flex items-center gap-2 cursor-pointer group">
                             <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${sendWhatsApp ? 'bg-emerald-500 border-emerald-500' : 'bg-transparent border-slate-500'}`}>
                                 {sendWhatsApp && <Send className="w-3 h-3 text-white" />}
@@ -399,7 +456,7 @@ Gracias por tu preferencia!`;
                                 checked={sendWhatsApp}
                                 onChange={e => setSendWhatsApp(e.target.checked)}
                             />
-                            <span className="text-slate-300 text-sm group-hover:text-white transition-colors">Enviar datos por WhatsApp al guardar</span>
+                            <span className="text-slate-300 text-sm group-hover:text-white transition-colors">Enviar datos por WhatsApp</span>
                         </label>
                     </div>
                     <div className="flex gap-3">
@@ -408,7 +465,7 @@ Gracias por tu preferencia!`;
                         </button>
                         <button onClick={handleAction} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-bold shadow-lg shadow-blue-900/20 flex items-center gap-2">
                             {accountToEdit ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                            {accountToEdit ? 'Actualizar Datos' : 'Registrar Venta'}
+                            {accountToEdit ? 'Guardar Cambios' : 'Registrar Venta'}
                         </button>
                     </div>
                 </div>
