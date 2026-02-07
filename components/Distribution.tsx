@@ -7,9 +7,14 @@ import ExpenseModal from './ExpenseModal';
 const Distribution: React.FC = () => {
   const { sales, expenses, businessSettings, updateBusinessSettings, deleteExpense, updateExpense } = useCyber();
   
-  // Date Selection: Default to current month
-  const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+  // Date Selection: Default to current date for Weekly calculation
+  const [selectedDate, setSelectedDate] = useState(() => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+  });
   
   // Settings Mode
   const [isEditing, setIsEditing] = useState(false);
@@ -33,14 +38,30 @@ const Distribution: React.FC = () => {
       }
   }, [businessSettings, isEditing]);
 
-  // --- Calculations ---
+  // --- Calculations (WEEKLY: Saturday to Friday) ---
   
-  const [year, month] = selectedMonth.split('-').map(Number);
-  const startOfMonth = new Date(year, month - 1, 1).getTime();
-  const endOfMonth = new Date(year, month, 0, 23, 59, 59).getTime();
+  const [year, month, day] = selectedDate.split('-').map(Number);
+  const currentDate = new Date(year, month - 1, day);
+  
+  const dayOfWeek = currentDate.getDay(); // 0 (Sun) - 6 (Sat)
+  // Calculate days since last Saturday
+  // Sat (6) -> 0 days back
+  // Sun (0) -> 1 day back ... Fri (5) -> 6 days back
+  const daysSinceSaturday = (dayOfWeek + 1) % 7;
+  
+  const startOfWeek = new Date(currentDate);
+  startOfWeek.setDate(currentDate.getDate() - daysSinceSaturday);
+  startOfWeek.setHours(0, 0, 0, 0);
+  
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
 
-  const filteredSales = sales.filter(s => s.timestamp >= startOfMonth && s.timestamp <= endOfMonth);
-  const filteredExpenses = expenses.filter(e => e.timestamp >= startOfMonth && e.timestamp <= endOfMonth);
+  const startTs = startOfWeek.getTime();
+  const endTs = endOfWeek.getTime();
+
+  const filteredSales = sales.filter(s => s.timestamp >= startTs && s.timestamp <= endTs);
+  const filteredExpenses = expenses.filter(e => e.timestamp >= startTs && e.timestamp <= endTs);
 
   // 1. Total Revenue
   const totalRevenue = filteredSales.reduce((acc, sale) => acc + sale.total, 0);
@@ -137,17 +158,21 @@ const Distribution: React.FC = () => {
                 <PieChart className="w-8 h-8 text-blue-500" />
                 Distribución de Ganancias
             </h2>
-            <p className="text-slate-400">Análisis y reparto de utilidades netas del periodo.</p>
+            <p className="text-slate-400">Análisis y reparto de utilidades netas por semana.</p>
           </div>
           
           <div className="flex gap-4 items-center">
               <div className="flex items-center gap-2 bg-slate-800 p-2 rounded-lg border border-slate-700">
-                  <Calendar className="w-5 h-5 text-slate-400" />
+                  <Calendar className="w-5 h-5 text-slate-400 ml-2" />
+                  <div className="text-sm text-slate-300 mr-2 text-right">
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block">Semana (Sáb - Vie)</span>
+                      {startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} al {endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                  </div>
                   <input 
-                      type="month" 
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="bg-transparent text-white outline-none font-medium cursor-pointer"
+                      type="date" 
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="bg-slate-900 text-white border border-slate-600 rounded px-2 py-1 text-sm outline-none cursor-pointer"
                   />
               </div>
               
@@ -278,7 +303,7 @@ const Distribution: React.FC = () => {
               <p className="text-slate-400 text-xs uppercase font-bold">Ingresos Totales</p>
               <h4 className="text-xl font-bold text-white mt-1">${totalRevenue.toFixed(2)}</h4>
               <div className="flex items-center gap-1 text-emerald-400 text-xs mt-2">
-                  <TrendingUp className="w-3 h-3" /> Ventas
+                  <TrendingUp className="w-3 h-3" /> Ventas Semana
               </div>
           </div>
 
@@ -412,7 +437,7 @@ const Distribution: React.FC = () => {
                     <div className="space-y-3 text-sm text-slate-300">
                         <div className="flex justify-between border-b border-slate-700 pb-2">
                             <span>Periodo:</span>
-                            <span className="text-white font-medium capitalize">{new Date(year, month - 1).toLocaleString('es-ES', { month: 'long', year: 'numeric' })}</span>
+                            <span className="text-white font-medium">Semana del {startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'numeric' })}</span>
                         </div>
                         <div className="flex justify-between border-b border-slate-700 pb-2">
                             <span>Ganancia Neta Total:</span>
@@ -426,7 +451,7 @@ const Distribution: React.FC = () => {
 
                     <div className="mt-6 p-4 bg-blue-900/10 border border-blue-500/20 rounded-lg">
                         <p className="text-xs text-blue-300 leading-relaxed text-center">
-                            Este fondo representa el <strong>{selectedRule.percentage}%</strong> de las utilidades reales del mes. Asegúrate de apartar este dinero físicamente o transferirlo a la cuenta correspondiente.
+                            Este fondo representa el <strong>{selectedRule.percentage}%</strong> de las utilidades reales de la semana. Asegúrate de apartar este dinero físicamente o transferirlo a la cuenta correspondiente.
                         </p>
                     </div>
                     
@@ -468,11 +493,11 @@ const Distribution: React.FC = () => {
                 <div className="p-6 overflow-y-auto">
                     {filteredExpenses.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 text-slate-500">
-                            <p>No hay gastos registrados en este periodo.</p>
+                            <p>No hay gastos registrados en esta semana.</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            <p className="text-sm text-slate-400 mb-2 font-medium">Periodo: {new Date(year, month - 1).toLocaleString('es-ES', { month: 'long', year: 'numeric' })}</p>
+                            <p className="text-sm text-slate-400 mb-2 font-medium">Periodo: {startOfWeek.toLocaleDateString('es-ES')} - {endOfWeek.toLocaleDateString('es-ES')}</p>
                             {filteredExpenses.map(expense => (
                                 <div key={expense.id} className="flex justify-between items-center p-4 bg-slate-700/30 rounded-xl border border-slate-700 hover:border-slate-600 transition-colors">
                                     <div className="flex-1">
