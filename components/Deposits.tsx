@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { Wallet, CreditCard, Banknote, Package, Edit2, TrendingUp, ArrowRight, Save, X, Calendar, RotateCcw } from 'lucide-react';
+import { Wallet, CreditCard, Banknote, Package, Edit2, TrendingUp, ArrowRight, Save, X, Calendar, RotateCcw, AlertCircle } from 'lucide-react';
 
 const Deposits: React.FC = () => {
     const { sales, expenses, businessSettings, updateBusinessSettings } = useCyber();
@@ -12,6 +12,7 @@ const Deposits: React.FC = () => {
     // --- Timeframe Logic (Current Week Default - Local Time) ---
     const [selectedDate, setSelectedDate] = useState(() => {
         const d = new Date();
+        // Return YYYY-MM-DD local
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
@@ -23,7 +24,7 @@ const Deposits: React.FC = () => {
     const currentDate = new Date(year, month - 1, day); // Local midnight
     
     const dayOfWeek = currentDate.getDay(); // 0 (Sun) - 6 (Sat)
-    // Adjust to make Monday the start (if 0 (Sun), make it -6 days back to get prev Monday)
+    // Adjust to make Monday the start
     const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     
     const startOfWeek = new Date(currentDate);
@@ -37,39 +38,61 @@ const Deposits: React.FC = () => {
     const startTs = startOfWeek.getTime();
     const endTs = endOfWeek.getTime();
 
-    // --- Calculations ---
+    // --- Base Calculations ---
     const weekSales = sales.filter(s => s.timestamp >= startTs && s.timestamp <= endTs);
     const weekExpenses = expenses.filter(e => e.timestamp >= startTs && e.timestamp <= endTs);
 
-    // 1. Costo Mercancia (COGS)
+    const totalRevenue = weekSales.reduce((acc, s) => acc + s.total, 0);
+    
+    // Costo Mercancia (COGS)
     const totalCOGS = weekSales.reduce((acc, sale) => {
         return acc + sale.items.reduce((sAcc, item) => sAcc + ((item.costAtSale || 0) * item.quantity), 0);
     }, 0);
 
-    // 2. Pagos Pendientes (Ventas Digitales)
-    // Suma de todas las ventas que NO son efectivo (Tarjeta, Transferencia, Clip)
-    const digitalSales = weekSales
-        .filter(s => s.paymentMethod !== 'CASH')
-        .reduce((acc, s) => acc + s.total, 0);
-
-    // 3. Efectivo Semana (Cash Flow Neto)
-    // Ventas en Efectivo MENOS Gastos (asumiendo que los gastos salen de la caja)
-    const cashSales = weekSales
-        .filter(s => s.paymentMethod === 'CASH')
-        .reduce((acc, s) => acc + s.total, 0);
-    
     const totalExpenses = weekExpenses.reduce((acc, e) => acc + e.amount, 0);
     
-    // El efectivo real que debería haber disponible para depositar
-    const netCash = cashSales - totalExpenses;
-
-    // 4. Ahorro de Reparto (Profit Allocations)
-    // Utilidad Neta Real = Ventas Totales - Costos - Gastos
-    const totalRevenue = weekSales.reduce((acc, s) => acc + s.total, 0);
+    // Net Profit for Distribution
     const netProfit = totalRevenue - totalCOGS - totalExpenses;
+
+    // --- Advanced Logic: Map to Distribution Rules ---
+    const findRule = (keywords: string[]) => {
+        return businessSettings.distributionRules?.find(r => 
+            keywords.some(k => r.name.toLowerCase().includes(k.toLowerCase()))
+        );
+    };
+
+    // 1. Pagos Pendientes
+    // Priority: Distribution Rule "Pendientes" -> Fallback: Digital Sales
+    const rulePending = findRule(['Pendientes', 'Pagos Pendientes']);
+    const digitalSales = weekSales.filter(s => s.paymentMethod !== 'CASH').reduce((acc, s) => acc + s.total, 0);
     
-    // Si hay pérdida, el ahorro es 0 (no hay nada que repartir)
-    const savingsAmount = netProfit > 0 ? netProfit : 0; 
+    const valPending = rulePending ? (netProfit > 0 ? netProfit * (rulePending.percentage / 100) : 0) : digitalSales;
+    const subPending = rulePending 
+        ? `Basado en regla de reparto (${rulePending.percentage}%).` 
+        : 'Ventas digitales (Tarjeta, CLIP).';
+    const tagPending = rulePending ? `${rulePending.percentage}% REPARTO` : 'DIGITAL';
+
+    // 2. Ahorro de Reparto
+    // Priority: Distribution Rule "Ahorro" -> Fallback: 0
+    const ruleSavings = findRule(['Ahorro', 'Fondo']);
+    const valSavings = ruleSavings ? (netProfit > 0 ? netProfit * (ruleSavings.percentage / 100) : 0) : 0;
+    const subSavings = ruleSavings 
+        ? `Basado en regla de reparto (${ruleSavings.percentage}%).` 
+        : 'Sin regla de ahorro configurada.';
+    const tagSavings = ruleSavings ? `${ruleSavings.percentage}% REPARTO` : 'SIN CONFIG';
+
+    // 3. Efectivo Semana
+    // Priority: Distribution Rule "Efectivo" -> Fallback: Physical Cash in Drawer
+    const ruleCash = findRule(['Efectivo', 'Sueldos', 'Ganancia']);
+    const cashSales = weekSales.filter(s => s.paymentMethod === 'CASH').reduce((acc, s) => acc + s.total, 0);
+    const netPhysicalCash = cashSales - totalExpenses;
+
+    const valCash = ruleCash ? (netProfit > 0 ? netProfit * (ruleCash.percentage / 100) : 0) : netPhysicalCash;
+    const subCash = ruleCash 
+        ? `Basado en regla de reparto (${ruleCash.percentage}%).` 
+        : 'Efectivo físico real (Ventas - Gastos).';
+    const tagCash = ruleCash ? `${ruleCash.percentage}% REPARTO` : 'CAJA FÍSICA';
+
 
     // --- Handlers ---
     const handleEdit = (key: string, currentName: string) => {
@@ -78,7 +101,6 @@ const Deposits: React.FC = () => {
     };
 
     const handleSave = (key: string) => {
-        // Ensure the object exists even if legacy data didn't have it
         const currentDestinations = businessSettings.depositDestinations || {
             pending: 'Cuenta Bancaria Principal',
             savings: 'Cuenta de Ahorro / Inversión',
@@ -96,11 +118,6 @@ const Deposits: React.FC = () => {
         setEditingKey(null);
     };
 
-    const handleResetName = (key: string) => {
-        setTempName('Sin asignar');
-        handleSave(key);
-    };
-
     // Helper for Card Rendering
     const DepositCard = ({ 
         title, 
@@ -109,7 +126,7 @@ const Deposits: React.FC = () => {
         icon: Icon, 
         gradient, 
         textColor, 
-        percentage,
+        percentageTag,
         subtitle
     }: { 
         title: string, 
@@ -118,10 +135,9 @@ const Deposits: React.FC = () => {
         icon: any, 
         gradient: string,
         textColor: string,
-        percentage?: string,
+        percentageTag?: string,
         subtitle?: string
     }) => {
-        // Safe access to destination name
         const destName = businessSettings.depositDestinations?.[destKey] || 'Sin asignar';
         const isEditingThis = editingKey === destKey;
 
@@ -137,9 +153,7 @@ const Deposits: React.FC = () => {
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold text-white leading-tight">{title}</h3>
-                                <div className="flex gap-2 mt-1">
-                                    {percentage && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wide">{percentage}</span>}
-                                </div>
+                                {percentageTag && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wide mt-1 inline-block">{percentageTag}</span>}
                             </div>
                         </div>
                         
@@ -152,12 +166,14 @@ const Deposits: React.FC = () => {
                     </div>
 
                     {/* Progress Visual */}
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full mb-4 overflow-hidden">
+                    <div className="w-full bg-slate-800 h-1.5 rounded-full mb-2 overflow-hidden">
                         <div className={`h-full ${textColor.replace('text-', 'bg-')}`} style={{ width: '60%' }}></div>
                     </div>
                     
                     {subtitle && (
-                        <p className="text-xs text-slate-400 mb-4 font-medium">{subtitle}</p>
+                        <p className="text-xs text-slate-400 mb-4 font-medium flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> {subtitle}
+                        </p>
                     )}
 
                     {/* Footer / Destination */}
@@ -225,28 +241,28 @@ const Deposits: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                {/* 1. Pagos Pendientes (Digital Sales) */}
+                {/* 1. Pagos Pendientes */}
                 <DepositCard 
                     title="Pagos Pendientes" 
-                    amount={digitalSales} 
+                    amount={valPending} 
                     destKey="pending"
                     icon={CreditCard}
                     gradient="from-blue-600 to-indigo-600"
                     textColor="text-blue-400"
-                    percentage="DIGITAL"
-                    subtitle="Ventas con Tarjeta, CLIP y Transferencias."
+                    percentageTag={tagPending}
+                    subtitle={subPending}
                 />
 
-                {/* 2. Ahorro de Reparto (Profit) */}
+                {/* 2. Ahorro de Reparto */}
                 <DepositCard 
                     title="Ahorro de Reparto" 
-                    amount={savingsAmount} 
+                    amount={valSavings} 
                     destKey="savings"
                     icon={TrendingUp}
                     gradient="from-purple-600 to-fuchsia-600"
                     textColor="text-purple-400"
-                    percentage="UTILIDAD NETA"
-                    subtitle="Ganancia Real (Ventas - Costos - Gastos)."
+                    percentageTag={tagSavings}
+                    subtitle={subSavings}
                 />
 
                 {/* 3. Costo de Mercancía (COGS) */}
@@ -257,26 +273,29 @@ const Deposits: React.FC = () => {
                     icon={Package}
                     gradient="from-orange-600 to-amber-600"
                     textColor="text-orange-400"
-                    percentage="REPOSICIÓN"
+                    percentageTag="REPOSICIÓN"
                     subtitle="Capital necesario para reponer stock vendido."
                 />
 
-                {/* 4. Efectivo Semana (Net Cash) */}
+                {/* 4. Efectivo Semana */}
                 <DepositCard 
                     title="Efectivo Semana" 
-                    amount={netCash} 
+                    amount={valCash} 
                     destKey="cash"
                     icon={Banknote}
                     gradient="from-emerald-600 to-teal-600"
                     textColor="text-emerald-400"
-                    percentage="CAJA FÍSICA"
-                    subtitle="Efectivo disponible tras pagar gastos."
+                    percentageTag={tagCash}
+                    subtitle={subCash}
                 />
 
             </div>
 
             <div className="mt-8 p-4 bg-slate-800/50 border border-slate-700 rounded-xl text-center text-slate-400 text-sm">
-                <p>Los montos se calculan en base a las ventas registradas entre el <strong>{startOfWeek.toLocaleDateString()}</strong> y el <strong>{endOfWeek.toLocaleDateString()}</strong>.</p>
+                <p>
+                    <strong>Nota:</strong> Los módulos de <em>Pagos Pendientes</em>, <em>Ahorro</em> y <em>Efectivo</em> intentarán coincidir con tus reglas de distribución (por nombre) en la sección Distribución. 
+                    Si no coinciden, se usarán cálculos estándar (Ventas Digitales, 0, Caja Física).
+                </p>
             </div>
         </div>
     );
