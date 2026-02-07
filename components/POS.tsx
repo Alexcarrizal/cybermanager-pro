@@ -27,8 +27,11 @@ const POS: React.FC = () => {
     return Object.entries(counts)
       .sort(([, a], [, b]) => b - a) // Sort descending by quantity
       .slice(0, 10) // Take top 10
-      .map(([id]) => products.find(p => p.id === id)) // Map back to product objects
-      .filter((p): p is Product => !!p); // Filter out products that might have been deleted
+      .map(([id, count]) => {
+          const product = products.find(p => p.id === id);
+          return product ? { product, count } : null;
+      })
+      .filter((item): item is { product: Product, count: number } => !!item); // Filter out deleted products
   }, [sales, products]);
 
   const filteredProducts = products.filter(p => 
@@ -230,34 +233,39 @@ const POS: React.FC = () => {
                     <Flame className="w-5 h-5 text-orange-500 fill-orange-500 animate-pulse" /> 
                     Top 10 Más Vendidos
                 </h3>
-                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                    {topSellingProducts.map((product, index) => (
+                <div className="flex gap-4 overflow-x-auto pb-4 pt-3 pl-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                    {topSellingProducts.map(({ product, count }, index) => (
                         <button
                             key={product.id}
                             onClick={() => addToCart(product)}
                             disabled={product.trackStock && product.stock <= 0}
-                            className="min-w-[160px] max-w-[160px] bg-slate-800 border border-slate-700 p-3 rounded-xl relative hover:border-orange-500/50 hover:bg-slate-700/50 transition-all group flex flex-col items-start text-left shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="min-w-[170px] max-w-[170px] bg-slate-800 border border-slate-700 p-3 rounded-xl relative hover:border-orange-500/50 hover:bg-slate-700/50 transition-all group flex flex-col items-start text-left shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {/* Rank Badge */}
-                            <div className={`absolute -top-3 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg z-10 border-2 border-slate-900 ${
-                                index === 0 ? 'bg-yellow-500' :
-                                index === 1 ? 'bg-slate-400' :
-                                index === 2 ? 'bg-amber-700' :
+                            {/* Rank Badge - Enhanced Visuals */}
+                            <div className={`absolute -top-3 -right-2 w-9 h-9 rounded-full flex items-center justify-center text-sm font-black text-white shadow-xl z-20 border-2 border-slate-900 transition-transform duration-300 ${
+                                index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-yellow-500/40 scale-110 group-hover:scale-125' :
+                                index === 1 ? 'bg-slate-400 shadow-slate-400/40' :
+                                index === 2 ? 'bg-amber-700 shadow-amber-700/40' :
                                 'bg-slate-600'
                             }`}>
                                 #{index + 1}
                             </div>
                             
                             <div className="p-2 bg-slate-700/50 rounded-lg text-slate-300 group-hover:text-white transition-colors mb-2">
-                                {index === 0 ? <Trophy className="w-5 h-5 text-yellow-500" /> : getIcon(product.category)}
+                                {index === 0 ? <Trophy className="w-5 h-5 text-yellow-500 fill-yellow-500" /> : getIcon(product.category)}
                             </div>
                             
                             <h4 className="font-bold text-slate-200 text-sm line-clamp-2 w-full mb-1 h-10">{product.name}</h4>
                             
                             <div className="mt-auto w-full">
-                                <span className="font-bold text-emerald-400 text-sm">${product.price}</span>
-                                <p className="text-[10px] text-slate-500 mt-0.5">
-                                    {!product.trackStock ? 'Infinito' : `${product.stock} disp.`}
+                                <div className='flex justify-between items-center mb-1'>
+                                    <span className="font-bold text-emerald-400 text-sm">${product.price}</span>
+                                    <span className="text-[10px] font-bold bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded border border-orange-500/20">
+                                        {count} vendidos
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-slate-500">
+                                    {!product.trackStock ? 'Infinito' : `${product.stock} disponibles`}
                                 </p>
                             </div>
                         </button>
