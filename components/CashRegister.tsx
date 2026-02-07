@@ -414,9 +414,74 @@ const CashRegister: React.FC = () => {
                 </div>
             )}
 
+            {/* Delete Sale Confirmation */}
+            {saleToDelete && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+                    <div className="bg-slate-800 w-full max-w-sm rounded-2xl border border-slate-700 shadow-2xl p-6 animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center gap-3 text-rose-500 mb-4">
+                            <div className="p-3 bg-rose-500/10 rounded-full">
+                                <AlertTriangle className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white">¿Eliminar Venta?</h3>
+                        </div>
+                        
+                        <p className="text-slate-400 mb-6">
+                            Esta acción eliminará el registro de venta permanentemente.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setSaleToDelete(null)}
+                                className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={confirmDeleteSale}
+                                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow-lg shadow-rose-900/20"
+                            >
+                                <Trash2 className="w-4 h-4" /> Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Expense Delete Confirmation */}
+            {expenseToDelete && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+                    <div className="bg-slate-800 w-full max-w-sm rounded-2xl border border-slate-700 shadow-2xl p-6 animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center gap-3 text-rose-500 mb-4">
+                            <div className="p-3 bg-rose-500/10 rounded-full">
+                                <AlertTriangle className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white">¿Eliminar Gasto?</h3>
+                        </div>
+                        
+                        <p className="text-slate-400 mb-6">
+                            Esta acción eliminará el registro de gasto permanentemente.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setExpenseToDelete(null)}
+                                className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={confirmDeleteExpense}
+                                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow-lg shadow-rose-900/20"
+                            >
+                                <Trash2 className="w-4 h-4" /> Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Other Modals */}
             {showAddExpenseModal && <ExpenseModal onClose={() => setShowAddExpenseModal(false)} />}
-            {/* Reuse Expense/Sale Delete modals if needed, simplified for brevity in this large block */}
         </div>
     );
 };
