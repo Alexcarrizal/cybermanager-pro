@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu } from 'lucide-react';
+import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu, Clock } from 'lucide-react';
 import { Station, StationStatus, DeviceType, Tariff, SessionType, PaymentMethod } from '../types';
 import StartSessionModal from './StartSessionModal';
 import AddProductToSessionModal from './AddProductToSessionModal';
@@ -289,6 +289,11 @@ const Dashboard: React.FC = () => {
   const monthlySales = sales.filter(s => s.timestamp >= startOfMonth.getTime());
   const monthlyRevenue = monthlySales.reduce((acc, curr) => acc + curr.total, 0);
 
+  // 3. Daily Sales (New)
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dailySales = sales.filter(s => s.timestamp >= startOfDay.getTime());
+  const dailyRevenue = dailySales.reduce((acc, curr) => acc + curr.total, 0);
+
   // Format Dates
   const monthName = now.toLocaleString('es-ES', { month: 'long' });
 
@@ -365,19 +370,19 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Transactions Card */}
+        {/* Daily Sales Card (Replaces Transactions) */}
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-slate-400 text-sm font-medium">Transacciones (Sem)</p>
-              <h3 className="text-3xl font-bold text-white mt-2">{weeklySales.length}</h3>
+              <p className="text-slate-400 text-sm font-medium">Ventas de Hoy</p>
+              <h3 className="text-3xl font-bold text-white mt-2">${dailyRevenue.toFixed(2)}</h3>
             </div>
             <div className="p-3 bg-orange-500/10 rounded-xl">
-              <Users className="w-6 h-6 text-orange-500" />
+              <Clock className="w-6 h-6 text-orange-500" />
             </div>
           </div>
           <div className="mt-4 text-slate-400 text-sm">
-            Promedio: ${(weeklyRevenue / (weeklySales.length || 1)).toFixed(1)}
+            <span className="font-bold text-white">{dailySales.length}</span> transacciones hoy
           </div>
         </div>
       </div>
