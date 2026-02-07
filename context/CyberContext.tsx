@@ -77,7 +77,7 @@ interface CyberContextType {
   updateBusinessSettings: (settings: BusinessSettings) => void;
 
   // Streaming Actions
-  addStreamingAccount: (account: StreamingAccount) => void;
+  addStreamingAccount: (account: StreamingAccount, paymentMethod?: PaymentMethod) => void;
   updateStreamingAccount: (account: StreamingAccount) => void;
   deleteStreamingAccount: (id: string) => void;
   addStreamingPlatform: (platform: StreamingPlatform) => void;
@@ -405,7 +405,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const updateBusinessSettings = (settings: BusinessSettings) => setBusinessSettings(settings);
 
   // Streaming Actions
-  const addStreamingAccount = (account: StreamingAccount) => {
+  const addStreamingAccount = (account: StreamingAccount, paymentMethod: PaymentMethod = 'CASH') => {
       setStreamingAccounts(prev => [account, ...prev]);
       if (!account.isTrial) {
         const platform = streamingPlatforms.find(p => p.id === account.platformId);
@@ -416,7 +416,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             priceAtSale: account.price,
             costAtSale: account.cost
         };
-        recordSale([saleItem], 'STREAMING', 'CASH', account.customerId);
+        recordSale([saleItem], 'STREAMING', paymentMethod, account.customerId);
       }
   };
   const updateStreamingAccount = (account: StreamingAccount) => setStreamingAccounts(prev => prev.map(a => a.id === account.id ? account : a));

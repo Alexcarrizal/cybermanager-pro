@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { Customer, StreamingPlatform, StreamingAccount } from '../types';
-import { X, PlayCircle, Plus, Calendar, Eye, Send, Save, EyeOff, Clock } from 'lucide-react';
+import { Customer, StreamingPlatform, StreamingAccount, PaymentMethod } from '../types';
+import { X, PlayCircle, Plus, Calendar, Eye, Send, Save, EyeOff, Clock, CreditCard, Banknote, ArrowRightLeft } from 'lucide-react';
 
 interface Props {
     onClose: () => void;
@@ -33,6 +33,9 @@ const StreamingSaleModal: React.FC<Props> = ({ onClose, accountToEdit }) => {
     const [isAdult, setIsAdult] = useState(false);
     const [isTrial, setIsTrial] = useState(false);
     
+    // Payment Logic
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
+
     // UI States
     const [showPassword, setShowPassword] = useState(false);
     const [sendWhatsApp, setSendWhatsApp] = useState(true);
@@ -167,7 +170,7 @@ const StreamingSaleModal: React.FC<Props> = ({ onClose, accountToEdit }) => {
         if (accountToEdit) {
             updateStreamingAccount(accountData);
         } else {
-            addStreamingAccount(accountData);
+            addStreamingAccount(accountData, paymentMethod);
         }
 
         if (sendWhatsApp && customerPhone) {
@@ -418,25 +421,59 @@ Gracias por tu preferencia!`;
                                     />
                                 </div>
                                 
-                                <div className="md:col-span-2 flex gap-6 pt-2 border-t border-slate-700/50 mt-2">
-                                     <label className="flex items-center gap-2 cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={isAdult}
-                                            onChange={(e) => setIsAdult(e.target.checked)}
-                                            className="w-4 h-4 rounded bg-slate-700 border-slate-600"
-                                        />
-                                        <span className="text-slate-300 text-xs">Contenido para adultos (+18)</span>
-                                     </label>
-                                     <label className="flex items-center gap-2 cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={isTrial}
-                                            onChange={(e) => setIsTrial(e.target.checked)}
-                                            className="w-4 h-4 rounded bg-slate-700 border-slate-600"
-                                        />
-                                        <span className="text-slate-300 text-xs">Es cuenta de prueba (Demo)</span>
-                                     </label>
+                                <div className="md:col-span-2 flex flex-col gap-3 pt-2 border-t border-slate-700/50 mt-2">
+                                     <div className="flex gap-6">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isAdult}
+                                                onChange={(e) => setIsAdult(e.target.checked)}
+                                                className="w-4 h-4 rounded bg-slate-700 border-slate-600"
+                                            />
+                                            <span className="text-slate-300 text-xs">Contenido para adultos (+18)</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isTrial}
+                                                onChange={(e) => setIsTrial(e.target.checked)}
+                                                className="w-4 h-4 rounded bg-slate-700 border-slate-600"
+                                            />
+                                            <span className="text-slate-300 text-xs">Es cuenta de prueba (Demo)</span>
+                                        </label>
+                                     </div>
+
+                                     {/* Payment Method Selector (Only for New Sales) */}
+                                     {!accountToEdit && (
+                                         <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-600">
+                                             <label className="block text-xs font-bold text-slate-300 mb-2 uppercase">Método de Pago</label>
+                                             <div className="flex gap-2">
+                                                 <button 
+                                                    onClick={() => setPaymentMethod('CASH')}
+                                                    className={`flex-1 py-2 px-3 rounded text-xs font-bold flex items-center justify-center gap-2 border transition-all ${paymentMethod === 'CASH' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-800 text-slate-400 border-slate-700'}`}
+                                                 >
+                                                     <Banknote className="w-4 h-4" /> Efectivo
+                                                 </button>
+                                                 <button 
+                                                    onClick={() => setPaymentMethod('TRANSFER')}
+                                                    className={`flex-1 py-2 px-3 rounded text-xs font-bold flex items-center justify-center gap-2 border transition-all ${paymentMethod === 'TRANSFER' ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-800 text-slate-400 border-slate-700'}`}
+                                                 >
+                                                     <ArrowRightLeft className="w-4 h-4" /> Transferencia
+                                                 </button>
+                                                 <button 
+                                                    onClick={() => setPaymentMethod('CARD')}
+                                                    className={`flex-1 py-2 px-3 rounded text-xs font-bold flex items-center justify-center gap-2 border transition-all ${paymentMethod === 'CARD' ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-800 text-slate-400 border-slate-700'}`}
+                                                 >
+                                                     <CreditCard className="w-4 h-4" /> Tarjeta
+                                                 </button>
+                                             </div>
+                                             {paymentMethod === 'TRANSFER' && (
+                                                 <p className="text-[10px] text-blue-300 mt-2 text-center">
+                                                     * El dinero no se sumará a la caja chica (Efectivo Esperado).
+                                                 </p>
+                                             )}
+                                         </div>
+                                     )}
                                 </div>
                             </div>
                         </div>
