@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { Calendar, DollarSign, TrendingUp, TrendingDown, Settings, Save, X, Edit3, PieChart, Info, Wallet, ArrowDownCircle, Edit2, Trash2, AlertTriangle, Plus } from 'lucide-react';
+import { Calendar, DollarSign, TrendingUp, TrendingDown, Settings, Save, X, Edit3, PieChart, Info, Wallet, ArrowDownCircle, Edit2, Trash2, AlertTriangle, Plus, Eye, EyeOff } from 'lucide-react';
 import { DistributionRule, Expense } from '../types';
 import ExpenseModal from './ExpenseModal';
 
@@ -19,6 +19,9 @@ const Distribution: React.FC = () => {
   // Settings Mode
   const [isEditing, setIsEditing] = useState(false);
   const [tempRules, setTempRules] = useState<DistributionRule[]>([]);
+  
+  // Privacy State
+  const [showPrivacy, setShowPrivacy] = useState(true);
   
   // Detail Modal State
   const [selectedRule, setSelectedRule] = useState<DistributionRule | null>(null);
@@ -84,6 +87,11 @@ const Distribution: React.FC = () => {
   const getDistributedAmount = (percentage: number) => {
       if (netRealProfit <= 0) return 0;
       return netRealProfit * (percentage / 100);
+  };
+
+  // Helper for masking
+  const formatCurrency = (val: number) => {
+      return showPrivacy ? `$${val.toFixed(2)}` : '••••••';
   };
 
   // --- Handlers ---
@@ -162,6 +170,16 @@ const Distribution: React.FC = () => {
           </div>
           
           <div className="flex gap-4 items-center">
+              
+              {/* Privacy Toggle */}
+              <button 
+                onClick={() => setShowPrivacy(!showPrivacy)}
+                className="p-2.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition-colors"
+                title={showPrivacy ? "Ocultar Cantidades" : "Mostrar Cantidades"}
+              >
+                  {showPrivacy ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+              </button>
+
               <div className="flex items-center gap-2 bg-slate-800 p-2 rounded-lg border border-slate-700">
                   <Calendar className="w-5 h-5 text-slate-400 ml-2" />
                   <div className="text-sm text-slate-300 mr-2 text-right">
@@ -301,7 +319,7 @@ const Distribution: React.FC = () => {
           {/* Revenue */}
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
               <p className="text-slate-400 text-xs uppercase font-bold">Ingresos Totales</p>
-              <h4 className="text-xl font-bold text-white mt-1">${totalRevenue.toFixed(2)}</h4>
+              <h4 className="text-xl font-bold text-white mt-1">{formatCurrency(totalRevenue)}</h4>
               <div className="flex items-center gap-1 text-emerald-400 text-xs mt-2">
                   <TrendingUp className="w-3 h-3" /> Ventas Semana
               </div>
@@ -310,7 +328,9 @@ const Distribution: React.FC = () => {
           {/* COGS */}
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
               <p className="text-slate-400 text-xs uppercase font-bold">Costo Mercancía</p>
-              <h4 className="text-xl font-bold text-white mt-1">-${totalCOGS.toFixed(2)}</h4>
+              <h4 className="text-xl font-bold text-white mt-1">
+                  {showPrivacy ? `-$${totalCOGS.toFixed(2)}` : '••••••'}
+              </h4>
               <div className="flex items-center gap-1 text-amber-400 text-xs mt-2">
                   <TrendingDown className="w-3 h-3" /> Costos Directos
               </div>
@@ -324,7 +344,9 @@ const Distribution: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                     <p className="text-slate-400 text-xs uppercase font-bold">Gastos Operativos</p>
-                    <h4 className="text-xl font-bold text-white mt-1">-${totalExpenses.toFixed(2)}</h4>
+                    <h4 className="text-xl font-bold text-white mt-1">
+                        {showPrivacy ? `-$${totalExpenses.toFixed(2)}` : '••••••'}
+                    </h4>
                 </div>
                 <ArrowDownCircle className="w-5 h-5 text-slate-600 group-hover:text-rose-500 transition-colors" />
               </div>
@@ -340,7 +362,7 @@ const Distribution: React.FC = () => {
                       <DollarSign className="w-4 h-4" /> Ganancia Real Neta
                   </p>
                   <h4 className={`text-2xl font-bold mt-1 ${netRealProfit >= 0 ? 'text-white' : 'text-rose-300'}`}>
-                      ${netRealProfit.toFixed(2)}
+                      {formatCurrency(netRealProfit)}
                   </h4>
                   <p className="text-xs text-blue-200/70 mt-1">Disponible para distribuir</p>
               </div>
@@ -377,7 +399,7 @@ const Distribution: React.FC = () => {
                             
                             <div className="flex items-baseline gap-1">
                                 <span className={`text-4xl font-bold ${rule.color}`}>
-                                    ${amount.toFixed(2)}
+                                    {formatCurrency(amount)}
                                 </span>
                             </div>
                             
@@ -403,7 +425,7 @@ const Distribution: React.FC = () => {
               </p>
               {netRealProfit < 0 && (
                   <p className="text-rose-400 mt-2 font-bold">
-                      El negocio presenta pérdidas de ${Math.abs(netRealProfit).toFixed(2)}
+                      El negocio presenta pérdidas de {showPrivacy ? `$${Math.abs(netRealProfit).toFixed(2)}` : '••••••'}
                   </p>
               )}
           </div>
@@ -430,7 +452,7 @@ const Distribution: React.FC = () => {
                     <div className="bg-slate-900/50 rounded-xl p-6 text-center border border-slate-700 mb-6">
                         <p className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-2">Monto Disponible</p>
                         <p className={`text-4xl font-bold ${selectedRule.color}`}>
-                            ${getDistributedAmount(selectedRule.percentage).toFixed(2)}
+                            {formatCurrency(getDistributedAmount(selectedRule.percentage))}
                         </p>
                     </div>
 
@@ -441,7 +463,7 @@ const Distribution: React.FC = () => {
                         </div>
                         <div className="flex justify-between border-b border-slate-700 pb-2">
                             <span>Ganancia Neta Total:</span>
-                            <span className="text-white font-medium">${netRealProfit.toFixed(2)}</span>
+                            <span className="text-white font-medium">{formatCurrency(netRealProfit)}</span>
                         </div>
                         <div className="flex justify-between border-b border-slate-700 pb-2">
                             <span>Porcentaje Asignado:</span>
@@ -510,7 +532,9 @@ const Distribution: React.FC = () => {
                                         <p className="text-xs text-slate-500 capitalize">{new Date(expense.timestamp).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <span className="text-rose-400 font-bold text-lg">-${expense.amount.toFixed(2)}</span>
+                                        <span className="text-rose-400 font-bold text-lg">
+                                            {showPrivacy ? `-$${expense.amount.toFixed(2)}` : '••••••'}
+                                        </span>
                                         <div className="flex gap-2">
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); setEditingExpense(expense); }}
@@ -534,7 +558,9 @@ const Distribution: React.FC = () => {
 
                 <div className="p-5 border-t border-slate-700 bg-slate-900/50 flex justify-between items-center">
                     <span className="text-slate-400 font-bold">Total Gastos</span>
-                    <span className="text-2xl font-bold text-rose-500">-${totalExpenses.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-rose-500">
+                        {showPrivacy ? `-$${totalExpenses.toFixed(2)}` : '••••••'}
+                    </span>
                 </div>
             </div>
         </div>
