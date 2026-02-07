@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu, Clock } from 'lucide-react';
+import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu, Clock, Eye, EyeOff } from 'lucide-react';
 import { Station, StationStatus, DeviceType, Tariff, SessionType, PaymentMethod } from '../types';
 import StartSessionModal from './StartSessionModal';
 import AddProductToSessionModal from './AddProductToSessionModal';
@@ -270,6 +270,11 @@ const Dashboard: React.FC = () => {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
+  // --- Privacy States (Individual) ---
+  const [showWeekly, setShowWeekly] = useState(true);
+  const [showMonthly, setShowMonthly] = useState(true);
+  const [showDaily, setShowDaily] = useState(true);
+
   // --- Logic for Sales Periods ---
   const now = new Date();
   
@@ -338,11 +343,22 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Weekly Sales Card */}
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl group">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-slate-400 text-sm font-medium">Ventas Semana (Sáb-Vie)</p>
-              <h3 className="text-3xl font-bold text-white mt-2">${weeklyRevenue.toFixed(2)}</h3>
+              <div className="flex items-center gap-2">
+                  <p className="text-slate-400 text-sm font-medium">Ventas Semana (Sáb-Vie)</p>
+                  <button 
+                    onClick={() => setShowWeekly(!showWeekly)} 
+                    className="text-slate-500 hover:text-white transition-colors"
+                    title={showWeekly ? "Ocultar cantidad" : "Mostrar cantidad"}
+                  >
+                      {showWeekly ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  </button>
+              </div>
+              <h3 className="text-3xl font-bold text-white mt-2">
+                  {showWeekly ? `$${weeklyRevenue.toFixed(2)}` : '••••••'}
+              </h3>
             </div>
             <div className="p-3 bg-blue-500/10 rounded-xl">
               <DollarSign className="w-6 h-6 text-blue-500" />
@@ -355,11 +371,22 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Monthly Sales Card */}
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl group">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-slate-400 text-sm font-medium">Ventas del Mes</p>
-              <h3 className="text-3xl font-bold text-white mt-2">${monthlyRevenue.toFixed(2)}</h3>
+              <div className="flex items-center gap-2">
+                  <p className="text-slate-400 text-sm font-medium">Ventas del Mes</p>
+                  <button 
+                    onClick={() => setShowMonthly(!showMonthly)} 
+                    className="text-slate-500 hover:text-white transition-colors"
+                    title={showMonthly ? "Ocultar cantidad" : "Mostrar cantidad"}
+                  >
+                      {showMonthly ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  </button>
+              </div>
+              <h3 className="text-3xl font-bold text-white mt-2">
+                  {showMonthly ? `$${monthlyRevenue.toFixed(2)}` : '••••••'}
+              </h3>
             </div>
             <div className="p-3 bg-purple-500/10 rounded-xl">
               <Calendar className="w-6 h-6 text-purple-500" />
@@ -370,12 +397,23 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Daily Sales Card (Replaces Transactions) */}
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl">
+        {/* Daily Sales Card */}
+        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl group">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-slate-400 text-sm font-medium">Ventas de Hoy</p>
-              <h3 className="text-3xl font-bold text-white mt-2">${dailyRevenue.toFixed(2)}</h3>
+              <div className="flex items-center gap-2">
+                  <p className="text-slate-400 text-sm font-medium">Ventas de Hoy</p>
+                  <button 
+                    onClick={() => setShowDaily(!showDaily)} 
+                    className="text-slate-500 hover:text-white transition-colors"
+                    title={showDaily ? "Ocultar cantidad" : "Mostrar cantidad"}
+                  >
+                      {showDaily ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  </button>
+              </div>
+              <h3 className="text-3xl font-bold text-white mt-2">
+                  {showDaily ? `$${dailyRevenue.toFixed(2)}` : '••••••'}
+              </h3>
             </div>
             <div className="p-3 bg-orange-500/10 rounded-xl">
               <Clock className="w-6 h-6 text-orange-500" />
