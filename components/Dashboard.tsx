@@ -271,9 +271,24 @@ const Dashboard: React.FC = () => {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   // --- Privacy States (Individual) ---
-  const [showWeekly, setShowWeekly] = useState(true);
-  const [showMonthly, setShowMonthly] = useState(true);
-  const [showDaily, setShowDaily] = useState(true);
+  // Initialize from LocalStorage to persist state across navigation
+  const [showWeekly, setShowWeekly] = useState(() => {
+      const saved = localStorage.getItem('dash_privacy_weekly');
+      return saved !== null ? JSON.parse(saved) : true;
+  });
+  const [showMonthly, setShowMonthly] = useState(() => {
+      const saved = localStorage.getItem('dash_privacy_monthly');
+      return saved !== null ? JSON.parse(saved) : true;
+  });
+  const [showDaily, setShowDaily] = useState(() => {
+      const saved = localStorage.getItem('dash_privacy_daily');
+      return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  // Save to LocalStorage whenever state changes
+  useEffect(() => { localStorage.setItem('dash_privacy_weekly', JSON.stringify(showWeekly)); }, [showWeekly]);
+  useEffect(() => { localStorage.setItem('dash_privacy_monthly', JSON.stringify(showMonthly)); }, [showMonthly]);
+  useEffect(() => { localStorage.setItem('dash_privacy_daily', JSON.stringify(showDaily)); }, [showDaily]);
 
   // --- Logic for Sales Periods ---
   const now = new Date();
