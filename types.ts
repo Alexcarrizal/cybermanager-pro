@@ -241,6 +241,28 @@ export interface BusinessSettings {
   };
 }
 
+// --- CASH CUT (CORTE DE CAJA) ---
+export interface CashCut {
+    id: string;
+    startTime: number;
+    endTime?: number;
+    
+    // Money Control
+    initialCash: number; // Fondo
+    finalCashSystem: number; // Calculated cash in system
+    finalCashDeclared: number; // User input count
+    difference: number; // Declared - System
+    
+    // Snapshots
+    totalSalesCash: number;
+    totalSalesCard: number;
+    totalSalesTransfer: number;
+    totalExpenses: number;
+    
+    status: 'OPEN' | 'CLOSED';
+    notes?: string;
+}
+
 // --- BACKUP DATA STRUCTURE ---
 export interface DatabaseBackup {
   products: Product[];
@@ -254,4 +276,5 @@ export interface DatabaseBackup {
   streamingDistributors: StreamingDistributor[];
   serviceOrders: ServiceOrder[];
   stations: Station[];
+  cashCuts: CashCut[]; // New
 }

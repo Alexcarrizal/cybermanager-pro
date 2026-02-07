@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Station, Product, Sale, Tariff, StationStatus, Session, SaleItem, Customer, SessionType, SessionItem, PaymentMethod, Expense, StreamingAccount, StreamingPlatform, StreamingDistributor, ServiceOrder, BusinessSettings, DatabaseBackup } from '../types';
+import { Station, Product, Sale, Tariff, StationStatus, Session, SaleItem, Customer, SessionType, SessionItem, PaymentMethod, Expense, StreamingAccount, StreamingPlatform, StreamingDistributor, ServiceOrder, BusinessSettings, DatabaseBackup, CashCut } from '../types';
 import * as XLSX from 'xlsx';
 
 // Define defaults locally to guarantee clean state on reset/init
@@ -45,6 +45,12 @@ interface CyberContextType {
 
   // Service Orders Data
   serviceOrders: ServiceOrder[];
+
+  // Cash Control
+  cashCuts: CashCut[];
+  activeCashCut: CashCut | undefined;
+  openRegister: (initialAmount: number) => void;
+  closeRegister: (declaredAmount: number, notes?: string) => void;
 
   // Actions
   addStation: (station: Station) => void;
@@ -120,6 +126,9 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [streamingDistributors, setStreamingDistributors] = useState<StreamingDistributor[]>(() => loadState('streamingDistributors', []));
   
   const [serviceOrders, setServiceOrders] = useState<ServiceOrder[]>(() => loadState('serviceOrders', []));
+  
+  // NEW: Cash Cuts
+  const [cashCuts, setCashCuts] = useState<CashCut[]>(() => loadState('cashCuts', []));
 
   // Persistence Effects with Error Handling
   const saveState = (key: string, value: any) => {
@@ -144,6 +153,10 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   useEffect(() => saveState('streamingDistributors', streamingDistributors), [streamingDistributors]);
   
   useEffect(() => saveState('serviceOrders', serviceOrders), [serviceOrders]);
+  useEffect(() => saveState('cashCuts', cashCuts), [cashCuts]);
+
+  // Derived: Active Cut
+  const activeCashCut = cashCuts.find(c => c.status === 'OPEN');
 
   // --- Auth Actions ---
   const login = (pin: string) => {
@@ -157,6 +170,61 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const logout = () => {
       setIsAuthenticated(false);
+  };
+
+  // --- Cash Control Actions ---
+  const openRegister = (initialAmount: number) => {
+      if (activeCashCut) return; // Already open
+      const newCut: CashCut = {
+          id: Date.now().toString(),
+          startTime: Date.now(),
+          initialCash: initialAmount,
+          finalCashSystem: 0,
+          finalCashDeclared: 0,
+          difference: 0,
+          totalSalesCash: 0,
+          totalSalesCard: 0,
+          totalSalesTransfer: 0,
+          totalExpenses: 0,
+          status: 'OPEN'
+      };
+      setCashCuts(prev => [newCut, ...prev]);
+  };
+
+  const closeRegister = (declaredAmount: number, notes?: string) => {
+      if (!activeCashCut) return;
+
+      const endTime = Date.now();
+      
+      // Calculate totals for this session timeframe
+      const sessionSales = sales.filter(s => s.timestamp >= activeCashCut.startTime && s.timestamp <= endTime);
+      const sessionExpenses = expenses.filter(e => e.timestamp >= activeCashCut.startTime && e.timestamp <= endTime);
+
+      const totalSalesCash = sessionSales.filter(s => s.paymentMethod === 'CASH').reduce((a,b) => a + b.total, 0);
+      const totalSalesCard = sessionSales.filter(s => s.paymentMethod === 'CARD' || s.paymentMethod === 'CLIP').reduce((a,b) => a + b.total, 0);
+      const totalSalesTransfer = sessionSales.filter(s => s.paymentMethod === 'TRANSFER').reduce((a,b) => a + b.total, 0);
+      
+      const totalExpenses = sessionExpenses.reduce((a,b) => a + b.amount, 0);
+
+      // System Cash = Initial + Sales(Cash) - Expenses
+      const finalCashSystem = activeCashCut.initialCash + totalSalesCash - totalExpenses;
+      const difference = declaredAmount - finalCashSystem;
+
+      const closedCut: CashCut = {
+          ...activeCashCut,
+          endTime,
+          finalCashSystem,
+          finalCashDeclared: declaredAmount,
+          difference,
+          totalSalesCash,
+          totalSalesCard,
+          totalSalesTransfer,
+          totalExpenses,
+          status: 'CLOSED',
+          notes
+      };
+
+      setCashCuts(prev => prev.map(c => c.id === activeCashCut.id ? closedCut : c));
   };
 
   const addStation = (station: Station) => setStations(prev => [...prev, station]);
@@ -374,6 +442,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (data.streamingDistributors) setStreamingDistributors(data.streamingDistributors);
       if (data.serviceOrders) setServiceOrders(data.serviceOrders);
       if (data.stations) setStations(data.stations);
+      if (data.cashCuts) setCashCuts(data.cashCuts);
   };
 
   const exportDatabase = () => {
@@ -397,6 +466,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(streamingPlatforms), "Plataformas");
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(streamingDistributors), "Distribuidores");
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(serviceOrders), "Reparaciones");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cashCuts), "CortesCaja");
       const dateStr = new Date().toISOString().slice(0,10);
       XLSX.writeFile(wb, `CyberManager_Respaldo_${dateStr}.xlsx`);
   };
@@ -417,6 +487,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setStreamingPlatforms([]);
       setStreamingDistributors([]);
       setServiceOrders([]);
+      setCashCuts([]);
 
       // 3. Force Empty Writes to LocalStorage (Redundancy)
       localStorage.setItem('sales', '[]');
@@ -433,6 +504,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       stations, products, tariffs, sales, expenses, customers, businessSettings,
       streamingAccounts, streamingPlatforms, streamingDistributors, serviceOrders,
       isAuthenticated, login, logout,
+      cashCuts, activeCashCut, openRegister, closeRegister,
       addStation, updateStation, updateStationStatus, addOrderToSession, endSession, deleteStation,
       addProduct, updateProductStock, deleteProduct, recordSale, updateSale, deleteSale, addExpense, updateExpense, deleteExpense, 
       addTariff, updateTariff, deleteTariff,
