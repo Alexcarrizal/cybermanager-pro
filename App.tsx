@@ -15,7 +15,7 @@ import { CyberProvider, useCyber } from './context/CyberContext';
 
 // Main content separated to use context hooks
 const MainApp: React.FC = () => {
-  const { isAuthenticated } = useCyber();
+  const { isAuthenticated, activeCashCut } = useCyber();
 
   if (!isAuthenticated) {
     return <LoginScreen />;
@@ -27,7 +27,8 @@ const MainApp: React.FC = () => {
         <Sidebar />
         <main className="flex-1 ml-64 h-full relative overflow-hidden">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            {/* Logic: If no active cash cut, redirect dashboard to cash register to force opening */}
+            <Route path="/" element={!activeCashCut ? <Navigate to="/caja" replace /> : <Dashboard />} />
             <Route path="/caja" element={<CashRegister />} />
             <Route path="/distribution" element={<Distribution />} />
             <Route path="/deposits" element={<Deposits />} />
