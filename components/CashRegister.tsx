@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useCyber } from '../context/CyberContext';
 import { Sale, Expense, CashCut } from '../types';
-import { DollarSign, TrendingUp, Package, Calendar, Edit2, Trash2, X, Save, ArrowDownCircle, AlertTriangle, MinusCircle, Tag, Lock, Unlock, History, CheckCircle } from 'lucide-react';
+import { DollarSign, TrendingUp, Package, Calendar, Edit2, Trash2, X, Save, ArrowDownCircle, AlertTriangle, MinusCircle, Tag, Lock, Unlock, History, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import ExpenseModal from './ExpenseModal';
 
 const EXPENSE_CATEGORIES = ['Servicios', 'Renta', 'Mantenimiento', 'Insumos', 'Mercancía', 'Sueldos', 'Otros'];
@@ -9,7 +9,7 @@ const EXPENSE_CATEGORIES = ['Servicios', 'Renta', 'Mantenimiento', 'Insumos', 'M
 const CashRegister: React.FC = () => {
     const { 
         sales, expenses, updateSale, deleteSale, updateExpense, deleteExpense,
-        activeCashCut, openRegister, closeRegister, cashCuts
+        activeCashCut, openRegister, closeRegister, updateCashCut, cashCuts
     } = useCyber();
     
     // View State
@@ -29,7 +29,6 @@ const CashRegister: React.FC = () => {
     const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
 
     // --- Calculations for ACTIVE SESSION ---
-    // If no active session, show 0 or handle in render
     const startTs = activeCashCut ? activeCashCut.startTime : Date.now();
     const endTs = Date.now(); // Live
 
@@ -40,16 +39,27 @@ const CashRegister: React.FC = () => {
         ? expenses.filter(e => e.timestamp >= startTs && e.timestamp <= endTs)
         : [];
 
-    const totalRevenue = filteredSales.reduce((acc, sale) => acc + sale.total, 0);
+    const totalRevenue = filteredSales.reduce((acc, sale) => acc + Number(sale.total), 0);
     const totalCOGS = filteredSales.reduce((acc, sale) => acc + sale.items.reduce((sAcc, item) => sAcc + ((item.costAtSale || 0) * item.quantity), 0), 0);
-    const totalExpenses = filteredExpenses.reduce((acc, exp) => acc + exp.amount, 0);
+    const totalExpenses = filteredExpenses.reduce((acc, exp) => acc + Number(exp.amount), 0);
     const netProfit = totalRevenue - totalCOGS - totalExpenses;
 
-    const cashSales = filteredSales.filter(s => s.paymentMethod === 'CASH').reduce((a,b) => a + b.total, 0);
-    const cardSales = filteredSales.filter(s => s.paymentMethod === 'CARD' || s.paymentMethod === 'CLIP').reduce((a,b) => a + b.total, 0);
+    const cashSales = filteredSales.filter(s => s.paymentMethod === 'CASH').reduce((a,b) => a + Number(b.total), 0);
+    const cardSales = filteredSales.filter(s => s.paymentMethod === 'CARD' || s.paymentMethod === 'CLIP').reduce((a,b) => a + Number(b.total), 0);
     
-    const initialCash = activeCashCut ? activeCashCut.initialCash : 0;
+    const initialCash = activeCashCut ? Number(activeCashCut.initialCash) : 0;
     const expectedCashInDrawer = initialCash + cashSales - totalExpenses;
+
+    // --- Orphaned Sales Detection (Sales made today BUT before the current cut started) ---
+    // Only check if we have an active cut
+    const startOfDay = new Date();
+    startOfDay.setHours(0,0,0,0);
+    
+    const orphanedSales = (activeCashCut) 
+        ? sales.filter(s => s.timestamp >= startOfDay.getTime() && s.timestamp < activeCashCut.startTime)
+        : [];
+    
+    const orphanedAmount = orphanedSales.reduce((acc, s) => acc + s.total, 0);
 
     // Formatting
     const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
@@ -71,6 +81,17 @@ const CashRegister: React.FC = () => {
         setCloseNotes('');
     };
 
+    const handleIncludeOrphans = () => {
+        if (!activeCashCut || orphanedSales.length === 0) return;
+        // Find earliest timestamp
+        const earliest = Math.min(...orphanedSales.map(s => s.timestamp));
+        // Update cut start time
+        updateCashCut({
+            ...activeCashCut,
+            startTime: earliest
+        });
+    };
+
     // Sub-actions
     const confirmDeleteSale = () => {
         if (saleToDelete) { deleteSale(saleToDelete); setSaleToDelete(null); }
@@ -85,16 +106,6 @@ const CashRegister: React.FC = () => {
         if (editingExpense) {
             updateExpense(editingExpense.id, { description: editingExpense.description, amount: editingExpense.amount, category: editingExpense.category });
             setEditingExpense(null);
-        }
-    };
-
-    const getCategoryColor = (cat?: string) => {
-        switch(cat) {
-            case 'Servicios': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-            case 'Renta': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-            case 'Mercancía': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
-            case 'Sueldos': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
-            default: return 'bg-slate-700 text-slate-400 border-slate-600';
         }
     };
 
@@ -160,6 +171,27 @@ const CashRegister: React.FC = () => {
                     ) : (
                         /* OPEN STATE - DASHBOARD */
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            {/* Orphaned Sales Warning */}
+                            {orphanedSales.length > 0 && (
+                                <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between animate-pulse">
+                                    <div className="flex items-center gap-3">
+                                        <AlertCircle className="w-6 h-6 text-amber-500" />
+                                        <div>
+                                            <p className="text-amber-200 font-bold">Ventas previas detectadas hoy</p>
+                                            <p className="text-amber-200/70 text-sm">
+                                                Hay {orphanedSales.length} ventas ({formatCurrency(orphanedAmount)}) registradas hoy antes de la apertura de caja.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={handleIncludeOrphans}
+                                        className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-lg shadow-lg"
+                                    >
+                                        Incluir en este Corte
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Action Bar */}
                             <div className="flex justify-between items-center mb-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
                                 <div className="flex items-center gap-4">

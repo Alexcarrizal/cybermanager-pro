@@ -51,6 +51,7 @@ interface CyberContextType {
   activeCashCut: CashCut | undefined;
   openRegister: (initialAmount: number) => void;
   closeRegister: (declaredAmount: number, notes?: string) => void;
+  updateCashCut: (cut: CashCut) => void; // New
 
   // Actions
   addStation: (station: Station) => void;
@@ -225,6 +226,10 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       };
 
       setCashCuts(prev => prev.map(c => c.id === activeCashCut.id ? closedCut : c));
+  };
+
+  const updateCashCut = (cut: CashCut) => {
+      setCashCuts(prev => prev.map(c => c.id === cut.id ? cut : c));
   };
 
   const addStation = (station: Station) => setStations(prev => [...prev, station]);
@@ -504,7 +509,7 @@ export const CyberProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       stations, products, tariffs, sales, expenses, customers, businessSettings,
       streamingAccounts, streamingPlatforms, streamingDistributors, serviceOrders,
       isAuthenticated, login, logout,
-      cashCuts, activeCashCut, openRegister, closeRegister,
+      cashCuts, activeCashCut, openRegister, closeRegister, updateCashCut,
       addStation, updateStation, updateStationStatus, addOrderToSession, endSession, deleteStation,
       addProduct, updateProductStock, deleteProduct, recordSale, updateSale, deleteSale, addExpense, updateExpense, deleteExpense, 
       addTariff, updateTariff, deleteTariff,
