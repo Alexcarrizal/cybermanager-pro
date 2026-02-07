@@ -24,13 +24,21 @@ const Deposits: React.FC = () => {
     const currentDate = new Date(year, month - 1, day); // Local midnight
     
     const dayOfWeek = currentDate.getDay(); // 0 (Sun) - 6 (Sat)
-    // Adjust to make Monday the start
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    
+    // LOGIC CHANGE: Start of Week is SATURDAY (6)
+    // Formula to find days since last Saturday:
+    // Sat (6) -> 0 days back
+    // Sun (0) -> 1 day back
+    // Mon (1) -> 2 days back
+    // ...
+    // Fri (5) -> 6 days back
+    const daysSinceSaturday = (dayOfWeek + 1) % 7;
     
     const startOfWeek = new Date(currentDate);
-    startOfWeek.setDate(currentDate.getDate() + diffToMonday);
+    startOfWeek.setDate(currentDate.getDate() - daysSinceSaturday);
     startOfWeek.setHours(0, 0, 0, 0);
     
+    // End of Week is FRIDAY (+6 days from Saturday)
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
@@ -226,8 +234,8 @@ const Deposits: React.FC = () => {
                 
                 <div className="bg-slate-800 p-2 rounded-lg border border-slate-700 flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-slate-400 ml-2" />
-                    <div className="text-sm text-slate-300 mr-2">
-                        <span className="text-xs text-slate-500 uppercase font-bold block">Semana del</span>
+                    <div className="text-sm text-slate-300 mr-2 text-right">
+                        <span className="text-[10px] text-slate-500 uppercase font-bold block">Semana (Sáb - Vie)</span>
                         {startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} al {endOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                     </div>
                     <input 
