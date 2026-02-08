@@ -25,13 +25,7 @@ const Deposits: React.FC = () => {
     
     const dayOfWeek = currentDate.getDay(); // 0 (Sun) - 6 (Sat)
     
-    // LOGIC CHANGE: Start of Week is SATURDAY (6)
-    // Formula to find days since last Saturday:
-    // Sat (6) -> 0 days back
-    // Sun (0) -> 1 day back
-    // Mon (1) -> 2 days back
-    // ...
-    // Fri (5) -> 6 days back
+    // Start of Week is SATURDAY (6)
     const daysSinceSaturday = (dayOfWeek + 1) % 7;
     
     const startOfWeek = new Date(currentDate);
@@ -47,8 +41,9 @@ const Deposits: React.FC = () => {
     const endTs = endOfWeek.getTime();
 
     // --- Base Calculations ---
-    const weekSales = sales.filter(s => s.timestamp >= startTs && s.timestamp <= endTs);
-    const weekExpenses = expenses.filter(e => e.timestamp >= startTs && e.timestamp <= endTs);
+    // FORCE NUMBER CONVERSION for timestamps to ensure strict filtering
+    const weekSales = sales.filter(s => Number(s.timestamp) >= startTs && Number(s.timestamp) <= endTs);
+    const weekExpenses = expenses.filter(e => Number(e.timestamp) >= startTs && Number(e.timestamp) <= endTs);
 
     const totalRevenue = weekSales.reduce((acc, s) => acc + s.total, 0);
     
@@ -59,7 +54,7 @@ const Deposits: React.FC = () => {
 
     const totalExpenses = weekExpenses.reduce((acc, e) => acc + e.amount, 0);
     
-    // Net Profit for Distribution
+    // Net Profit for Distribution (Accounting Profit)
     const netProfit = totalRevenue - totalCOGS - totalExpenses;
 
     // --- Advanced Logic: Map to Distribution Rules ---
@@ -92,13 +87,16 @@ const Deposits: React.FC = () => {
     // 3. Efectivo Semana
     // Priority: Distribution Rule "Efectivo" -> Fallback: Physical Cash in Drawer
     const ruleCash = findRule(['Efectivo', 'Sueldos', 'Ganancia']);
+    
+    // Calculate Physical Cash: Cash Sales - Cash Expenses (expenses that actually affect cashbox)
     const cashSales = weekSales.filter(s => s.paymentMethod === 'CASH').reduce((acc, s) => acc + s.total, 0);
-    const netPhysicalCash = cashSales - totalExpenses;
+    const cashExpenses = weekExpenses.filter(e => e.affectsCashBox !== false).reduce((acc, e) => acc + e.amount, 0);
+    const netPhysicalCash = cashSales - cashExpenses;
 
     const valCash = ruleCash ? (netProfit > 0 ? netProfit * (ruleCash.percentage / 100) : 0) : netPhysicalCash;
     const subCash = ruleCash 
         ? `Basado en regla de reparto (${ruleCash.percentage}%).` 
-        : 'Efectivo físico real (Ventas - Gastos).';
+        : 'Efectivo físico real (Ventas Efectivo - Salidas Caja).';
     const tagCash = ruleCash ? `${ruleCash.percentage}% REPARTO` : 'CAJA FÍSICA';
 
 
@@ -242,7 +240,7 @@ const Deposits: React.FC = () => {
                         type="date" 
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
-                        className="bg-slate-900 text-white border border-slate-600 rounded px-2 py-1 text-sm outline-none"
+                        className="bg-slate-900 text-white border border-slate-600 rounded px-2 py-1 text-sm outline-none cursor-pointer"
                     />
                 </div>
             </div>

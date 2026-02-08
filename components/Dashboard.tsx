@@ -300,18 +300,21 @@ const Dashboard: React.FC = () => {
   startOfWeek.setDate(now.getDate() - daysSinceSaturday);
   startOfWeek.setHours(0, 0, 0, 0);
 
-  const weeklySales = sales.filter(s => s.timestamp >= startOfWeek.getTime());
+  const weeklySales = sales.filter(s => Number(s.timestamp) >= startOfWeek.getTime());
   const weeklyRevenue = weeklySales.reduce((acc, curr) => acc + curr.total, 0);
+  
+  // Formatted date range for display
+  const weeklyDateRange = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - Presente`;
 
   // 2. Monthly Sales
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   startOfMonth.setHours(0, 0, 0, 0);
-  const monthlySales = sales.filter(s => s.timestamp >= startOfMonth.getTime());
+  const monthlySales = sales.filter(s => Number(s.timestamp) >= startOfMonth.getTime());
   const monthlyRevenue = monthlySales.reduce((acc, curr) => acc + curr.total, 0);
 
   // 3. Daily Sales (New)
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dailySales = sales.filter(s => s.timestamp >= startOfDay.getTime());
+  const dailySales = sales.filter(s => Number(s.timestamp) >= startOfDay.getTime());
   const dailyRevenue = dailySales.reduce((acc, curr) => acc + curr.total, 0);
 
   // Format Dates
@@ -381,7 +384,7 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="mt-4 flex items-center gap-1 text-emerald-400 text-sm">
             <TrendingUp className="w-4 h-4" />
-            <span>Semana Actual</span>
+            <span>{weeklyDateRange}</span>
           </div>
         </div>
 
