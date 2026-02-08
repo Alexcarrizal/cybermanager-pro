@@ -68,10 +68,6 @@ export interface Station {
   type: DeviceType;
   status: StationStatus;
   currentSession?: Session;
-  // New hardware specs fields
-  specs?: string;     // e.g. "Ryzen 5, RTX 3060"
-  monitor?: string;   // e.g. "24' 144Hz"
-  tariffId?: string;  // Specific tariff ID override
 }
 
 export interface Product {
@@ -113,6 +109,7 @@ export interface Expense {
   amount: number;
   timestamp: number;
   category?: string;
+  source?: 'CASH_REGISTER' | 'PROFIT'; // New field: CASH_REGISTER affects daily box, PROFIT only affects net distribution
 }
 
 export interface DashboardStats {
@@ -133,7 +130,6 @@ export interface StreamingPlatform {
   id: string;
   name: string;
   category: string; // e.g., 'Social streaming', 'Adultos', 'Familiar'
-  distributorId?: string; // Linked distributor
   suggestedPrice: number;
   cost: number;
 }
@@ -231,36 +227,7 @@ export interface BusinessSettings {
   website: string;
   whatsapp: string;
   footerMessage?: string;
-  distributionRules?: DistributionRule[];
-  adminPin: string; // NEW: PIN for login
-  depositDestinations?: { // NEW: Custom names for deposit cards
-    pending: string;
-    savings: string;
-    cogs: string;
-    cash: string;
-  };
-}
-
-// --- CASH CUT (CORTE DE CAJA) ---
-export interface CashCut {
-    id: string;
-    startTime: number;
-    endTime?: number;
-    
-    // Money Control
-    initialCash: number; // Fondo
-    finalCashSystem: number; // Calculated cash in system
-    finalCashDeclared: number; // User input count
-    difference: number; // Declared - System
-    
-    // Snapshots
-    totalSalesCash: number;
-    totalSalesCard: number;
-    totalSalesTransfer: number;
-    totalExpenses: number;
-    
-    status: 'OPEN' | 'CLOSED';
-    notes?: string;
+  distributionRules?: DistributionRule[]; // New field
 }
 
 // --- BACKUP DATA STRUCTURE ---
@@ -276,5 +243,4 @@ export interface DatabaseBackup {
   streamingDistributors: StreamingDistributor[];
   serviceOrders: ServiceOrder[];
   stations: Station[];
-  cashCuts: CashCut[]; // New
 }
