@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { X, ArrowDownCircle, Plus, Tag } from 'lucide-react';
+import { X, ArrowDownCircle, Plus, Tag, Wallet } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -13,6 +13,7 @@ const ExpenseModal: React.FC<Props> = ({ onClose }) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Otros');
+  const [affectsCash, setAffectsCash] = useState(false); // Default to FALSE per request
 
   const handleRegister = () => {
     if (!amount || Number(amount) <= 0 || !description) return;
@@ -20,7 +21,8 @@ const ExpenseModal: React.FC<Props> = ({ onClose }) => {
     addExpense({
       description,
       amount: Number(amount),
-      category
+      category,
+      affectsCashBox: affectsCash
     });
     onClose();
   };
@@ -90,6 +92,34 @@ const ExpenseModal: React.FC<Props> = ({ onClose }) => {
                   placeholder="0.00"
                 />
              </div>
+          </div>
+
+          {/* Affect Cash Toggle */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <label className="flex items-center justify-between cursor-pointer gap-4">
+                  <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${affectsCash ? 'bg-rose-100 text-rose-600' : 'bg-slate-200 text-slate-500'}`}>
+                          <Wallet className="w-5 h-5" />
+                      </div>
+                      <div>
+                          <span className="block text-sm font-bold text-slate-700">Retirar dinero de Caja</span>
+                          <span className="block text-xs text-slate-500">
+                              {affectsCash 
+                                ? 'El dinero se descontará del efectivo actual.' 
+                                : 'Solo se registra como gasto (no afecta caja).'}
+                          </span>
+                      </div>
+                  </div>
+                  <div className={`relative w-12 h-6 rounded-full transition-colors ${affectsCash ? 'bg-rose-500' : 'bg-slate-300'}`}>
+                      <input 
+                          type="checkbox" 
+                          className="sr-only"
+                          checked={affectsCash}
+                          onChange={(e) => setAffectsCash(e.target.checked)}
+                      />
+                      <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${affectsCash ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                  </div>
+              </label>
           </div>
 
         </div>

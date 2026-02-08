@@ -19,7 +19,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose }) => {
   const defaultCategories = ['Accesorios', 'Bebidas', 'Botanas', 'Papelería', 'Servicios'];
   
   // Combine and Sort Alphabetically
-  const allCategorySuggestions = Array.from(new Set([...defaultCategories, ...existingCategories])).sort((a, b) => a.localeCompare(b));
+  const allCategorySuggestions = Array.from(new Set([...defaultCategories, ...existingCategories])).sort((a: string, b: string) => a.localeCompare(b));
 
   const warrantyOptions = ["1 Mes", "3 Meses", "6 Meses", "1 Año"];
 
