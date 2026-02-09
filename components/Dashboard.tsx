@@ -117,7 +117,7 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
     <>
     <div className={`relative p-5 rounded-2xl border-2 transition-all duration-300 shadow-lg group ${getStatusClasses()}`}>
       
-      <div className="flex justify-between items-start mb-2 pr-8">
+      <div className="flex justify-between items-start mb-4 pr-8">
         <div className="flex items-center gap-3">
           <div className={`p-2.5 rounded-lg transition-colors duration-500 ${station.status === StationStatus.OCCUPIED ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'bg-slate-700 text-slate-400'}`}>
             <Icon className="w-6 h-6" />
@@ -134,22 +134,6 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
           }`} 
         />
       </div>
-
-      {/* Hardware Specs Display */}
-      {(station.specs || station.monitor) && (
-        <div className="flex flex-wrap gap-2 mb-4 pl-1">
-             {station.specs && (
-                 <span className="inline-flex items-center gap-1 text-[10px] bg-slate-700/50 border border-slate-600 px-1.5 py-0.5 rounded text-slate-300">
-                    <Cpu className="w-3 h-3" /> {station.specs}
-                 </span>
-             )}
-             {station.monitor && (
-                 <span className="inline-flex items-center gap-1 text-[10px] bg-slate-700/50 border border-slate-600 px-1.5 py-0.5 rounded text-slate-300">
-                    <Tv className="w-3 h-3" /> {station.monitor}
-                 </span>
-             )}
-        </div>
-      )}
 
       <div className="space-y-4">
         {station.status === StationStatus.OCCUPIED ? (
@@ -344,8 +328,6 @@ const Dashboard: React.FC = () => {
         name: newStationName,
         type: newStationType,
         status: StationStatus.AVAILABLE,
-        specs: '',
-        monitor: '',
         tariffId: selectedTariffId || undefined
       });
       setIsModalOpen(false);
