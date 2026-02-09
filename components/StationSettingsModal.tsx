@@ -49,7 +49,6 @@ const StationSettingsModal: React.FC<Props> = ({ station, onClose }) => {
   };
 
   // Determine current value for the unified select
-  // If tariffId exists and is valid, use it. Otherwise use the raw type.
   const currentSelectValue = (tariffId && tariffs.some(t => t.id === tariffId)) ? tariffId : type;
 
   return (
