@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Station, Customer, Tariff, SessionType, Session, StationStatus, DeviceType } from '../types';
 import { useCyber } from '../context/CyberContext';
-import { X, Clock, Play, Gift, Plus, Star, AlertCircle } from 'lucide-react';
+import { X, Clock, Play, Gift, Plus, Star, AlertCircle, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface StartSessionModalProps {
@@ -226,10 +226,7 @@ const StartSessionModal: React.FC<StartSessionModalProps> = ({ station, onClose 
                             : 'bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-500'
                         }`}
                     >
-                        <div className="relative">
-                            <span className="absolute -top-1 -right-2 text-[10px] font-mono">|</span>
-                            <span className="font-mono text-sm">¢</span>
-                        </div>
+                        <Timer className="w-5 h-5 mb-1" />
                         <span className="font-bold text-sm">Tiempo Fijo</span>
                         <span className="text-[10px] opacity-70">Cuenta regresiva</span>
                     </button>
