@@ -301,6 +301,12 @@ const Dashboard: React.FC = () => {
   // Net Cash in Drawer for the week (Sales Cash - Expenses Cash)
   const weeklyNetCash = weeklyCashSales - weeklyCashExpenses;
 
+  // -- NEW: Net Real Profit (Revenue - COGS - Total Expenses) --
+  const weeklyCOGS = weeklySales.reduce((acc, sale) => {
+    return acc + sale.items.reduce((sAcc, item) => sAcc + ((item.costAtSale || 0) * item.quantity), 0);
+  }, 0);
+  const weeklyNetProfit = weeklyRevenue - weeklyTotalExpenses - weeklyCOGS;
+
   // Formatted date range for display
   const weeklyDateRange = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - Presente`;
 
@@ -354,7 +360,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="p-8 space-y-8 h-full overflow-y-auto">
       {/* Top Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         
         {/* Weekly Sales Card - Clickable */}
         <button 
@@ -365,7 +371,7 @@ const Dashboard: React.FC = () => {
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-2">
-                  <p className="text-slate-400 text-sm font-medium">Ventas Semana (Sáb-Vie)</p>
+                  <p className="text-slate-400 text-sm font-medium">Ventas Semana</p>
                   <div 
                     onClick={(e) => { e.stopPropagation(); setShowWeekly(!showWeekly); }} 
                     className="text-slate-500 hover:text-white transition-colors cursor-pointer p-1 rounded hover:bg-slate-700"
@@ -392,6 +398,33 @@ const Dashboard: React.FC = () => {
               </div>
           </div>
         </button>
+
+        {/* Net Profit Card (Weekly) */}
+        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl group relative overflow-hidden">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-2">
+                  <p className="text-slate-400 text-sm font-medium">Ganancia Real Neta</p>
+                  <button 
+                    onClick={() => setShowWeekly(!showWeekly)} 
+                    className="text-slate-500 hover:text-white transition-colors p-1 rounded hover:bg-slate-700"
+                    title={showWeekly ? "Ocultar cantidad" : "Mostrar cantidad"}
+                  >
+                      {showWeekly ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  </button>
+              </div>
+              <h3 className={`text-3xl font-bold mt-2 ${weeklyNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {showWeekly ? `$${weeklyNetProfit.toFixed(2)}` : '••••••'}
+              </h3>
+            </div>
+            <div className="p-3 bg-emerald-500/10 rounded-xl">
+              <Wallet className="w-6 h-6 text-emerald-500" />
+            </div>
+          </div>
+          <div className="mt-4 text-xs text-slate-500">
+            Ingresos - Costos - Gastos (Semana)
+          </div>
+        </div>
 
         {/* Monthly Sales Card */}
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl group">
