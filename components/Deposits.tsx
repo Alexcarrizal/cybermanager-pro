@@ -1,6 +1,171 @@
 import React, { useState } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { Wallet, CreditCard, Banknote, Package, Edit2, TrendingUp, ArrowRight, Save, X, Calendar, RotateCcw, AlertCircle, ArrowUpCircle, ArrowDownCircle, ArrowRightLeft } from 'lucide-react';
+import { Wallet, CreditCard, Banknote, Package, Edit2, TrendingUp, ArrowRight, Save, X, Calendar, AlertCircle, ArrowUpCircle, ArrowDownCircle, ArrowRightLeft, Info } from 'lucide-react';
+
+// --- Interface for Props ---
+interface DepositCardProps { 
+    title: string; 
+    amount: number; 
+    destKey: 'pending' | 'savings' | 'cogs' | 'cash'; 
+    icon: any; 
+    gradient: string;
+    textColor: string;
+    percentageTag?: string;
+    subtitle?: string;
+    onClick?: () => void;
+    // Logic props
+    currentName: string;
+    isEditing: boolean;
+    tempName: string;
+    setTempName: (val: string) => void;
+    onEdit: (key: string, name: string) => void;
+    onSave: (key: string) => void;
+    onCancel: () => void;
+}
+
+// --- Extracted Component (Fixes Focus/State Issues) ---
+const DepositCard: React.FC<DepositCardProps> = ({ 
+    title, 
+    amount, 
+    destKey, 
+    icon: Icon, 
+    gradient, 
+    textColor, 
+    percentageTag,
+    subtitle,
+    onClick,
+    currentName,
+    isEditing,
+    tempName,
+    setTempName,
+    onEdit,
+    onSave,
+    onCancel
+}) => {
+    // Determine container element type
+    const Container = onClick ? 'button' : 'div';
+
+    const handleSaveClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onSave(destKey);
+    };
+
+    const handleCancelClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onCancel();
+    };
+
+    const handleInputClick = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent card click
+    };
+
+    return (
+        <Container 
+            onClick={onClick}
+            className={`relative w-full text-left overflow-hidden rounded-2xl p-1 bg-gradient-to-br ${gradient} shadow-xl group transition-all hover:scale-[1.01] ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-offset-slate-900 hover:ring-white/20' : ''}`}
+        >
+            <div className="bg-slate-900/90 h-full w-full rounded-xl p-6 backdrop-blur-sm flex flex-col justify-between relative z-10">
+                
+                {onClick && (
+                    <div className="absolute top-4 right-4 text-white/30 group-hover:text-white transition-colors">
+                        <Info className="w-5 h-5" />
+                    </div>
+                )}
+
+                {/* Header */}
+                <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-3 rounded-xl bg-slate-800 border border-slate-700 ${textColor}`}>
+                            <Icon className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-white leading-tight">{title}</h3>
+                            {percentageTag && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wide mt-1 inline-block">{percentageTag}</span>}
+                        </div>
+                    </div>
+                    
+                    <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Monto Semana</p>
+                        <h2 className={`text-3xl font-bold ${amount < 0 ? 'text-rose-400' : 'text-white'}`}>
+                            ${amount.toFixed(2)}
+                        </h2>
+                    </div>
+                </div>
+
+                {/* Progress Visual */}
+                <div className="w-full bg-slate-800 h-1.5 rounded-full mb-2 overflow-hidden">
+                    <div className={`h-full ${textColor.replace('text-', 'bg-')}`} style={{ width: '60%' }}></div>
+                </div>
+                
+                {subtitle && (
+                    <p className="text-xs text-slate-400 mb-4 font-medium flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> {subtitle}
+                    </p>
+                )}
+
+                {/* Footer / Destination */}
+                <div className="mt-auto pt-4 border-t border-slate-800/50 flex justify-between items-end">
+                    <div className="flex-1">
+                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
+                            Transferir a <ArrowRight className="w-3 h-3" />
+                        </p>
+                        
+                        {isEditing ? (
+                            <div 
+                                className="flex gap-2 items-center relative z-20" 
+                                onClick={handleInputClick} 
+                                onMouseDown={(e) => e.stopPropagation()}
+                            >
+                                <input 
+                                    autoFocus
+                                    value={tempName}
+                                    onChange={(e) => setTempName(e.target.value)}
+                                    className="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white outline-none w-full shadow-inner focus:border-blue-500"
+                                    placeholder="Nombre de cuenta..."
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') onSave(destKey);
+                                        if (e.key === 'Escape') onCancel();
+                                    }}
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={handleSaveClick} 
+                                    className="p-1.5 bg-emerald-600 rounded hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 flex-shrink-0" 
+                                    title="Guardar"
+                                >
+                                    <Save className="w-4 h-4" />
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={handleCancelClick} 
+                                    className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white flex-shrink-0" 
+                                    title="Cancelar"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div 
+                                className="flex items-center gap-2 group/edit cursor-pointer select-none relative z-20" 
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(destKey, currentName); }}
+                            >
+                                <span className={`text-sm font-medium border-b border-dashed pb-0.5 transition-colors ${currentName === 'Sin asignar' ? 'text-slate-500 border-slate-600 italic' : 'text-slate-200 border-slate-500 group-hover/edit:text-white'}`}>
+                                    {currentName}
+                                </span>
+                                <Edit2 className="w-3 h-3 text-slate-500 opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Background Deco */}
+                <div className={`absolute -right-6 -bottom-6 w-32 h-32 rounded-full opacity-5 blur-2xl ${textColor.replace('text-', 'bg-')}`}></div>
+            </div>
+        </Container>
+    );
+};
 
 const Deposits: React.FC = () => {
     const { sales, expenses, businessSettings, updateBusinessSettings } = useCyber();
@@ -15,27 +180,22 @@ const Deposits: React.FC = () => {
     // --- Timeframe Logic (Current Week Default - Local Time) ---
     const [selectedDate, setSelectedDate] = useState(() => {
         const d = new Date();
-        // Return YYYY-MM-DD local
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     });
 
-    // Precise Local Time Calculation for Week Range
     const [year, month, day] = selectedDate.split('-').map(Number);
-    const currentDate = new Date(year, month - 1, day); // Local midnight
+    const currentDate = new Date(year, month - 1, day);
     
-    const dayOfWeek = currentDate.getDay(); // 0 (Sun) - 6 (Sat)
-    
-    // Start of Week is SATURDAY (6)
+    const dayOfWeek = currentDate.getDay();
     const daysSinceSaturday = (dayOfWeek + 1) % 7;
     
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(currentDate.getDate() - daysSinceSaturday);
     startOfWeek.setHours(0, 0, 0, 0);
     
-    // End of Week is FRIDAY (+6 days from Saturday)
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
@@ -44,20 +204,17 @@ const Deposits: React.FC = () => {
     const endTs = endOfWeek.getTime();
 
     // --- Base Calculations ---
-    // FORCE NUMBER CONVERSION for timestamps to ensure strict filtering
     const weekSales = sales.filter(s => Number(s.timestamp) >= startTs && Number(s.timestamp) <= endTs);
     const weekExpenses = expenses.filter(e => Number(e.timestamp) >= startTs && Number(e.timestamp) <= endTs);
 
     const totalRevenue = weekSales.reduce((acc, s) => acc + s.total, 0);
     
-    // Costo Mercancia (COGS)
     const totalCOGS = weekSales.reduce((acc, sale) => {
         return acc + sale.items.reduce((sAcc, item) => sAcc + ((item.costAtSale || 0) * item.quantity), 0);
     }, 0);
 
     const totalExpenses = weekExpenses.reduce((acc, e) => acc + e.amount, 0);
     
-    // Net Profit for Distribution (Accounting Profit)
     const netProfit = totalRevenue - totalCOGS - totalExpenses;
 
     // --- Advanced Logic: Map to Distribution Rules ---
@@ -68,7 +225,6 @@ const Deposits: React.FC = () => {
     };
 
     // 1. Pagos Pendientes
-    // Priority: Distribution Rule "Pendientes" -> Fallback: Digital Sales
     const rulePending = findRule(['Pendientes', 'Pagos Pendientes']);
     const digitalSales = weekSales.filter(s => s.paymentMethod !== 'CASH').reduce((acc, s) => acc + s.total, 0);
     
@@ -79,7 +235,6 @@ const Deposits: React.FC = () => {
     const tagPending = rulePending ? `${rulePending.percentage}% REPARTO` : 'DIGITAL';
 
     // 2. Ahorro de Reparto
-    // Priority: Distribution Rule "Ahorro" -> Fallback: 0
     const ruleSavings = findRule(['Ahorro', 'Fondo']);
     const valSavings = ruleSavings ? (netProfit > 0 ? netProfit * (ruleSavings.percentage / 100) : 0) : 0;
     const subSavings = ruleSavings 
@@ -88,7 +243,6 @@ const Deposits: React.FC = () => {
     const tagSavings = ruleSavings ? `${ruleSavings.percentage}% REPARTO` : 'SIN CONFIG';
 
     // 3. Efectivo Semana
-    // Priority: Distribution Rule "Efectivo" -> Fallback: Physical Cash in Drawer
     const ruleCash = findRule(['Efectivo', 'Sueldos', 'Ganancia']);
     
     // Calculate Breakdown for Summary Modal
@@ -104,7 +258,7 @@ const Deposits: React.FC = () => {
     const valCash = ruleCash ? (netProfit > 0 ? netProfit * (ruleCash.percentage / 100) : 0) : netPhysicalCash;
     const subCash = ruleCash 
         ? `Basado en regla de reparto (${ruleCash.percentage}%).` 
-        : 'Clic para ver desglose detallado.';
+        : 'Clic para ver desglose detallado de caja.';
     const tagCash = ruleCash ? `${ruleCash.percentage}% REPARTO` : 'CAJA FÍSICA';
 
 
@@ -122,114 +276,20 @@ const Deposits: React.FC = () => {
             cash: 'Caja Chica / Efectivo'
         };
 
+        const newDestinations = {
+            ...currentDestinations,
+            [key]: tempName
+        };
+
         updateBusinessSettings({
             ...businessSettings,
-            depositDestinations: {
-                ...currentDestinations,
-                [key]: tempName
-            }
+            depositDestinations: newDestinations
         });
         setEditingKey(null);
     };
 
-    // Helper for Card Rendering
-    const DepositCard = ({ 
-        title, 
-        amount, 
-        destKey, 
-        icon: Icon, 
-        gradient, 
-        textColor, 
-        percentageTag,
-        subtitle,
-        onClick
-    }: { 
-        title: string, 
-        amount: number, 
-        destKey: 'pending' | 'savings' | 'cogs' | 'cash', 
-        icon: any, 
-        gradient: string,
-        textColor: string,
-        percentageTag?: string,
-        subtitle?: string,
-        onClick?: () => void
-    }) => {
-        const destName = businessSettings.depositDestinations?.[destKey] || 'Sin asignar';
-        const isEditingThis = editingKey === destKey;
-
-        return (
-            <div 
-                onClick={onClick}
-                className={`relative overflow-hidden rounded-2xl p-1 bg-gradient-to-br ${gradient} shadow-xl group transition-all hover:scale-[1.01] ${onClick ? 'cursor-pointer' : ''}`}
-            >
-                <div className="bg-slate-900/90 h-full w-full rounded-xl p-6 backdrop-blur-sm flex flex-col justify-between relative z-10">
-                    
-                    {/* Header */}
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className={`p-3 rounded-xl bg-slate-800 border border-slate-700 ${textColor}`}>
-                                <Icon className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-bold text-white leading-tight">{title}</h3>
-                                {percentageTag && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wide mt-1 inline-block">{percentageTag}</span>}
-                            </div>
-                        </div>
-                        
-                        <div className="text-right">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Monto Semana</p>
-                            <h2 className={`text-3xl font-bold ${amount < 0 ? 'text-rose-400' : 'text-white'}`}>
-                                ${amount.toFixed(2)}
-                            </h2>
-                        </div>
-                    </div>
-
-                    {/* Progress Visual */}
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full mb-2 overflow-hidden">
-                        <div className={`h-full ${textColor.replace('text-', 'bg-')}`} style={{ width: '60%' }}></div>
-                    </div>
-                    
-                    {subtitle && (
-                        <p className="text-xs text-slate-400 mb-4 font-medium flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> {subtitle}
-                        </p>
-                    )}
-
-                    {/* Footer / Destination */}
-                    <div className="mt-auto pt-4 border-t border-slate-800/50 flex justify-between items-end">
-                        <div className="flex-1">
-                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
-                                Transferir a <ArrowRight className="w-3 h-3" />
-                            </p>
-                            
-                            {isEditingThis ? (
-                                <div className="flex gap-2 items-center" onClick={e => e.stopPropagation()}>
-                                    <input 
-                                        autoFocus
-                                        value={tempName}
-                                        onChange={(e) => setTempName(e.target.value)}
-                                        className="bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white outline-none w-full shadow-inner"
-                                        placeholder="Nombre de cuenta..."
-                                    />
-                                    <button onClick={() => handleSave(destKey)} className="p-1.5 bg-emerald-600 rounded hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20" title="Guardar"><Save className="w-4 h-4" /></button>
-                                    <button onClick={() => setEditingKey(null)} className="p-1.5 bg-slate-700 rounded hover:bg-slate-600 text-white" title="Cancelar"><X className="w-4 h-4" /></button>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2 group/edit cursor-pointer select-none" onClick={(e) => { e.stopPropagation(); handleEdit(destKey, destName); }}>
-                                    <span className={`text-sm font-medium border-b border-dashed pb-0.5 transition-colors ${destName === 'Sin asignar' ? 'text-slate-500 border-slate-600 italic' : 'text-slate-200 border-slate-500 group-hover/edit:text-white'}`}>
-                                        {destName}
-                                    </span>
-                                    <Edit2 className="w-3 h-3 text-slate-500 opacity-0 group-hover/edit:opacity-100 transition-opacity" />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Background Deco */}
-                    <div className={`absolute -right-6 -bottom-6 w-32 h-32 rounded-full opacity-5 blur-2xl ${textColor.replace('text-', 'bg-')}`}></div>
-                </div>
-            </div>
-        );
+    const handleCancel = () => {
+        setEditingKey(null);
     };
 
     return (
@@ -271,6 +331,14 @@ const Deposits: React.FC = () => {
                     textColor="text-blue-400"
                     percentageTag={tagPending}
                     subtitle={subPending}
+                    // Edit Props
+                    currentName={businessSettings.depositDestinations?.pending || 'Cuenta Bancaria Principal'}
+                    isEditing={editingKey === 'pending'}
+                    tempName={tempName}
+                    setTempName={setTempName}
+                    onEdit={handleEdit}
+                    onSave={handleSave}
+                    onCancel={handleCancel}
                 />
 
                 {/* 2. Ahorro de Reparto */}
@@ -283,6 +351,14 @@ const Deposits: React.FC = () => {
                     textColor="text-purple-400"
                     percentageTag={tagSavings}
                     subtitle={subSavings}
+                    // Edit Props
+                    currentName={businessSettings.depositDestinations?.savings || 'Cuenta de Ahorro / Inversión'}
+                    isEditing={editingKey === 'savings'}
+                    tempName={tempName}
+                    setTempName={setTempName}
+                    onEdit={handleEdit}
+                    onSave={handleSave}
+                    onCancel={handleCancel}
                 />
 
                 {/* 3. Costo de Mercancía (COGS) */}
@@ -295,6 +371,14 @@ const Deposits: React.FC = () => {
                     textColor="text-orange-400"
                     percentageTag="REPOSICIÓN"
                     subtitle="Capital necesario para reponer stock vendido."
+                    // Edit Props
+                    currentName={businessSettings.depositDestinations?.cogs || 'Cuenta de Recompra'}
+                    isEditing={editingKey === 'cogs'}
+                    tempName={tempName}
+                    setTempName={setTempName}
+                    onEdit={handleEdit}
+                    onSave={handleSave}
+                    onCancel={handleCancel}
                 />
 
                 {/* 4. Efectivo Semana */}
@@ -308,6 +392,14 @@ const Deposits: React.FC = () => {
                     percentageTag={tagCash}
                     subtitle={subCash}
                     onClick={() => setShowCashSummary(true)}
+                    // Edit Props
+                    currentName={businessSettings.depositDestinations?.cash || 'Caja Chica / Efectivo'}
+                    isEditing={editingKey === 'cash'}
+                    tempName={tempName}
+                    setTempName={setTempName}
+                    onEdit={handleEdit}
+                    onSave={handleSave}
+                    onCancel={handleCancel}
                 />
 
             </div>

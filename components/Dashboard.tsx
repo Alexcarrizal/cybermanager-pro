@@ -358,6 +358,7 @@ const Dashboard: React.FC = () => {
         
         {/* Weekly Sales Card - Clickable */}
         <button 
+            type="button"
             onClick={() => setShowWeeklyDetail(true)}
             className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl group text-left hover:ring-2 hover:ring-blue-500/50 hover:bg-slate-700/50 transition-all cursor-pointer relative"
         >
@@ -367,7 +368,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-slate-400 text-sm font-medium">Ventas Semana (Sáb-Vie)</p>
                   <div 
                     onClick={(e) => { e.stopPropagation(); setShowWeekly(!showWeekly); }} 
-                    className="text-slate-500 hover:text-white transition-colors cursor-pointer"
+                    className="text-slate-500 hover:text-white transition-colors cursor-pointer p-1 rounded hover:bg-slate-700"
                     title={showWeekly ? "Ocultar cantidad" : "Mostrar cantidad"}
                   >
                       {showWeekly ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -400,7 +401,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-slate-400 text-sm font-medium">Ventas del Mes</p>
                   <button 
                     onClick={() => setShowMonthly(!showMonthly)} 
-                    className="text-slate-500 hover:text-white transition-colors"
+                    className="text-slate-500 hover:text-white transition-colors p-1 rounded hover:bg-slate-700"
                     title={showMonthly ? "Ocultar cantidad" : "Mostrar cantidad"}
                   >
                       {showMonthly ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -427,7 +428,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-slate-400 text-sm font-medium">Ventas de Hoy</p>
                   <button 
                     onClick={() => setShowDaily(!showDaily)} 
-                    className="text-slate-500 hover:text-white transition-colors"
+                    className="text-slate-500 hover:text-white transition-colors p-1 rounded hover:bg-slate-700"
                     title={showDaily ? "Ocultar cantidad" : "Mostrar cantidad"}
                   >
                       {showDaily ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
