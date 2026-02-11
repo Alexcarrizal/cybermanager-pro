@@ -1,12 +1,22 @@
-import React from 'react';
-import { LayoutDashboard, ShoppingCart, Package, Settings, Ghost, Receipt, Tv, Wrench, PieChart, Download, LogOut, Wallet } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { LayoutDashboard, ShoppingCart, Package, Settings, Ghost, Receipt, Tv, Wrench, PieChart, Download, LogOut, Wallet, BarChart3 } from 'lucide-react';
 import { useCyber } from '../context/CyberContext';
 
+// Simple hook to track hash location for active state
+const useHashLocation = () => {
+  const [loc, setLoc] = useState(window.location.hash.replace(/^#/, '') || '/');
+  useEffect(() => {
+    const handler = () => setLoc(window.location.hash.replace(/^#/, '') || '/');
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+  return loc;
+};
+
 const Sidebar: React.FC = () => {
-  const location = useLocation();
+  const locationPath = useHashLocation();
   const { exportDatabase, logout } = useCyber();
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => locationPath === path;
 
   const navItems = [
     { path: '/', label: 'Panel Principal', icon: LayoutDashboard },
@@ -14,6 +24,7 @@ const Sidebar: React.FC = () => {
     { path: '/inventory', label: 'Inventario', icon: Package },
     { path: '/service-orders', label: 'Ordenes de Servicio', icon: Wrench },
     { path: '/streaming', label: 'Streaming', icon: Tv },
+    { path: '/reports', label: 'Reportes Financieros', icon: BarChart3 },
     { path: '/distribution', label: 'Distribución', icon: PieChart },
     { path: '/deposits', label: 'Depósitos', icon: Wallet },
     { path: '/caja', label: 'Caja', icon: Receipt },
@@ -33,9 +44,9 @@ const Sidebar: React.FC = () => {
         {navItems.map((item) => {
           const active = isActive(item.path);
           return (
-            <Link
+            <a
               key={item.path}
-              to={item.path}
+              href={`#${item.path}`}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
                 active 
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
@@ -44,7 +55,7 @@ const Sidebar: React.FC = () => {
             >
               <item.icon className={`w-5 h-5 ${active ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
               <span className="font-medium">{item.label}</span>
-            </Link>
+            </a>
           );
         })}
       </nav>
