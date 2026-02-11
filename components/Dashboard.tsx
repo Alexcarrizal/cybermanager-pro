@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu, Clock, Eye, EyeOff, X, Banknote, ArrowUpCircle, ArrowRightLeft, CreditCard, ArrowDownCircle, Wallet } from 'lucide-react';
+import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu, Clock, Eye, EyeOff, X, Banknote, ArrowUpCircle, ArrowRightLeft, CreditCard, ArrowDownCircle, Wallet, Package } from 'lucide-react';
 import { Station, StationStatus, DeviceType, Tariff, SessionType, PaymentMethod } from '../types';
 import StartSessionModal from './StartSessionModal';
 import AddProductToSessionModal from './AddProductToSessionModal';
@@ -243,7 +243,7 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
 
 // --- Main Dashboard Component ---
 const Dashboard: React.FC = () => {
-  const { sales, expenses, stations, tariffs, addStation } = useCyber();
+  const { sales, expenses, stations, tariffs, addStation, businessSettings } = useCyber();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStationName, setNewStationName] = useState('');
   
@@ -254,6 +254,7 @@ const Dashboard: React.FC = () => {
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showWeeklyDetail, setShowWeeklyDetail] = useState(false);
+  const [showDepositsModal, setShowDepositsModal] = useState(false);
 
   // --- Privacy States (Individual) ---
   // Initialize from LocalStorage to persist state across navigation
@@ -306,6 +307,45 @@ const Dashboard: React.FC = () => {
     return acc + sale.items.reduce((sAcc, item) => sAcc + ((item.costAtSale || 0) * item.quantity), 0);
   }, 0);
   const weeklyNetProfit = weeklyRevenue - weeklyTotalExpenses - weeklyCOGS;
+
+  // --- Deposits Calculation Logic ---
+  const getDepositSummary = () => {
+      const findRule = (keywords: string[]) => {
+        return businessSettings.distributionRules?.find(r => 
+            keywords.some(k => r.name.toLowerCase().includes(k.toLowerCase()))
+        );
+      };
+
+      // 1. Pending (Digital)
+      const rulePending = findRule(['Pendientes', 'Pagos Pendientes']);
+      const digitalSales = weeklySales.filter(s => s.paymentMethod !== 'CASH').reduce((acc, s) => acc + s.total, 0);
+      const valPending = rulePending ? (weeklyNetProfit > 0 ? weeklyNetProfit * (rulePending.percentage / 100) : 0) : digitalSales;
+      const destPending = businessSettings.depositDestinations?.pending || 'Cuenta Bancaria Principal';
+
+      // 2. Savings
+      const ruleSavings = findRule(['Ahorro', 'Fondo']);
+      const valSavings = ruleSavings ? (weeklyNetProfit > 0 ? weeklyNetProfit * (ruleSavings.percentage / 100) : 0) : 0;
+      const destSavings = businessSettings.depositDestinations?.savings || 'Cuenta de Ahorro / Inversión';
+
+      // 3. COGS
+      const valCOGS = weeklyCOGS;
+      const destCOGS = businessSettings.depositDestinations?.cogs || 'Cuenta de Recompra';
+
+      // 4. Cash
+      const ruleCash = findRule(['Efectivo', 'Sueldos', 'Ganancia']);
+      const netPhysicalCash = weeklyCashSales - weeklyCashExpenses;
+      const valCash = ruleCash ? (weeklyNetProfit > 0 ? weeklyNetProfit * (ruleCash.percentage / 100) : 0) : netPhysicalCash;
+      const destCash = businessSettings.depositDestinations?.cash || 'Caja Chica / Efectivo';
+
+      return [
+          { title: 'Pagos Pendientes', amount: valPending, dest: destPending, color: 'text-blue-400', icon: CreditCard },
+          { title: 'Ahorro de Reparto', amount: valSavings, dest: destSavings, color: 'text-purple-400', icon: TrendingUp },
+          { title: 'Costo de Mercancía', amount: valCOGS, dest: destCOGS, color: 'text-orange-400', icon: Package },
+          { title: 'Efectivo Semana', amount: valCash, dest: destCash, color: 'text-emerald-400', icon: Wallet },
+      ];
+  };
+
+  const depositSummary = getDepositSummary();
 
   // Formatted date range for display
   const weeklyDateRange = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - Presente`;
@@ -483,6 +523,12 @@ const Dashboard: React.FC = () => {
         >
           <MinusCircle className="w-5 h-5" /> Nueva Salida
         </button>
+        <button 
+            onClick={() => setShowDepositsModal(true)}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-indigo-900/20 transition-all hover:scale-105"
+        >
+            <Wallet className="w-5 h-5" /> Ver Depósitos
+        </button>
       </div>
 
       {/* Station Control Header */}
@@ -527,6 +573,59 @@ const Dashboard: React.FC = () => {
       {/* Modals */}
       {showEntryModal && <EntryModal onClose={() => setShowEntryModal(false)} />}
       {showExpenseModal && <ExpenseModal onClose={() => setShowExpenseModal(false)} />}
+
+      {/* Deposits Summary Modal */}
+      {showDepositsModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-slate-900 w-full max-w-3xl rounded-2xl border border-slate-700 shadow-2xl animate-in fade-in zoom-in duration-200">
+                <div className="bg-indigo-600 p-5 flex justify-between items-center rounded-t-2xl">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Wallet className="w-6 h-6" /> Resumen de Depósitos
+                    </h3>
+                    <button onClick={() => setShowDepositsModal(false)} className="text-indigo-100 hover:text-white">
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div className="p-6">
+                    <p className="text-center text-slate-400 text-sm mb-6">
+                        Distribución estimada para la semana del <strong>{weeklyDateRange}</strong>.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {depositSummary.map((item, idx) => (
+                            <div key={idx} className="bg-slate-800 p-5 rounded-xl border border-slate-700 flex flex-col gap-3 shadow-lg">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg bg-slate-900 ${item.color}`}>
+                                            <item.icon className="w-5 h-5" />
+                                        </div>
+                                        <span className="font-bold text-white">{item.title}</span>
+                                    </div>
+                                    <span className={`text-2xl font-bold ${item.color}`}>
+                                        {showWeekly ? `$${item.amount.toFixed(2)}` : '••••••'}
+                                    </span>
+                                </div>
+                                <div className="pl-[3.25rem]">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-0.5">Transferir a:</p>
+                                    <p className="text-sm text-slate-300 font-medium">{item.dest}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="p-4 bg-slate-800 rounded-b-2xl border-t border-slate-700 flex justify-end">
+                    <button 
+                        onClick={() => setShowDepositsModal(false)}
+                        className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-colors"
+                    >
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
 
       {/* Weekly Summary Modal - Removed per request, but logic kept just in case user reverts. 
           Since the button trigger is removed, this modal is unreachable. 
