@@ -152,27 +152,29 @@ const CashRegister: React.FC = () => {
                                 <h3 className="text-2xl font-bold text-white mb-2">Caja Cerrada</h3>
                                 <p className="text-slate-400 mb-6">Ingresa el fondo inicial para comenzar las operaciones del día.</p>
                                 
-                                <div className="mb-6 text-left">
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">Monto Inicial (Fondo)</label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-3 text-slate-500 font-bold">$</span>
-                                        <input 
-                                            type="number" 
-                                            value={openAmount}
-                                            onChange={(e) => setOpenAmount(e.target.value)}
-                                            className="w-full bg-slate-900 border border-slate-600 rounded-xl py-3 pl-8 pr-4 text-white text-lg font-bold outline-none focus:border-emerald-500 transition-colors"
-                                            placeholder="0.00"
-                                            autoFocus
-                                        />
+                                <form onSubmit={(e) => { e.preventDefault(); handleOpenRegister(); }}>
+                                    <div className="mb-6 text-left">
+                                        <label className="block text-sm font-medium text-slate-300 mb-2">Monto Inicial (Fondo)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-3 text-slate-500 font-bold">$</span>
+                                            <input 
+                                                type="number" 
+                                                value={openAmount}
+                                                onChange={(e) => setOpenAmount(e.target.value)}
+                                                className="w-full bg-slate-900 border border-slate-600 rounded-xl py-3 pl-8 pr-4 text-white text-lg font-bold outline-none focus:border-emerald-500 transition-colors"
+                                                placeholder="0.00"
+                                                autoFocus
+                                            />
+                                        </div>
                                     </div>
-                                </div>
 
-                                <button 
-                                    onClick={handleOpenRegister}
-                                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-900/20 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Unlock className="w-5 h-5" /> Abrir Caja
-                                </button>
+                                    <button 
+                                        type="submit"
+                                        className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-900/20 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Unlock className="w-5 h-5" /> Abrir Caja
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     ) : (
