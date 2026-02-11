@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu, Clock, Eye, EyeOff, X, Banknote, ArrowUpCircle, ArrowRightLeft, CreditCard, ArrowDownCircle, Wallet, Package } from 'lucide-react';
+import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu, Clock, Eye, EyeOff, X, Banknote, ArrowUpCircle, ArrowRightLeft, CreditCard, ArrowDownCircle, Wallet, Package, ClipboardList, Truck, AlertTriangle } from 'lucide-react';
 import { Station, StationStatus, DeviceType, Tariff, SessionType, PaymentMethod } from '../types';
 import StartSessionModal from './StartSessionModal';
 import AddProductToSessionModal from './AddProductToSessionModal';
@@ -243,7 +243,7 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
 
 // --- Main Dashboard Component ---
 const Dashboard: React.FC = () => {
-  const { sales, expenses, stations, tariffs, addStation, businessSettings } = useCyber();
+  const { sales, expenses, stations, tariffs, addStation, businessSettings, products } = useCyber();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStationName, setNewStationName] = useState('');
   
@@ -255,6 +255,7 @@ const Dashboard: React.FC = () => {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showWeeklyDetail, setShowWeeklyDetail] = useState(false);
   const [showDepositsModal, setShowDepositsModal] = useState(false);
+  const [showRestockModal, setShowRestockModal] = useState(false);
 
   // --- Privacy States (Individual) ---
   // Initialize from LocalStorage to persist state across navigation
@@ -346,6 +347,15 @@ const Dashboard: React.FC = () => {
   };
 
   const depositSummary = getDepositSummary();
+
+  // --- Restock Logic ---
+  const outOfStockProducts = products.filter(p => p.trackStock && p.stock <= 0);
+  const groupedRestock = outOfStockProducts.reduce((acc, product) => {
+      const dist = product.distributor || 'Sin Distribuidor Asignado';
+      if (!acc[dist]) acc[dist] = [];
+      acc[dist].push(product);
+      return acc;
+  }, {} as Record<string, typeof products>);
 
   // Formatted date range for display
   const weeklyDateRange = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - Presente`;
@@ -529,6 +539,12 @@ const Dashboard: React.FC = () => {
         >
             <Wallet className="w-5 h-5" /> Ver Depósitos
         </button>
+        <button 
+            onClick={() => setShowRestockModal(true)}
+            className="px-6 py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-orange-900/20 transition-all hover:scale-105"
+        >
+            <ClipboardList className="w-5 h-5" /> Reponer Stock
+        </button>
       </div>
 
       {/* Station Control Header */}
@@ -618,6 +634,82 @@ const Dashboard: React.FC = () => {
                 <div className="p-4 bg-slate-800 rounded-b-2xl border-t border-slate-700 flex justify-end">
                     <button 
                         onClick={() => setShowDepositsModal(false)}
+                        className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-colors"
+                    >
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Restock List Modal */}
+      {showRestockModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-slate-900 w-full max-w-4xl rounded-2xl border border-slate-700 shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[85vh]">
+                <div className="bg-orange-600 p-5 flex justify-between items-center rounded-t-2xl">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <ClipboardList className="w-6 h-6" /> Lista de Reposición
+                    </h3>
+                    <button onClick={() => setShowRestockModal(false)} className="text-orange-100 hover:text-white">
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto">
+                    {Object.keys(groupedRestock).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                            <div className="bg-slate-800 p-4 rounded-full mb-3">
+                                <Package className="w-10 h-10" />
+                            </div>
+                            <p className="text-lg font-medium">¡Todo en orden!</p>
+                            <p className="text-sm">No hay productos agotados en este momento.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            <p className="text-slate-400 text-sm">
+                                Productos que requieren compra inmediata, organizados por proveedor.
+                            </p>
+                            
+                            {Object.entries(groupedRestock).map(([distributor, items]) => (
+                                <div key={distributor} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+                                    <div className="bg-slate-800/80 p-4 border-b border-slate-700 flex items-center gap-2">
+                                        <Truck className="w-5 h-5 text-orange-400" />
+                                        <h4 className="font-bold text-white">{distributor}</h4>
+                                        <span className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full ml-auto">
+                                            {items.length} productos
+                                        </span>
+                                    </div>
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-900/30 text-xs text-slate-500 uppercase">
+                                            <tr>
+                                                <th className="px-4 py-3">Producto</th>
+                                                <th className="px-4 py-3">Categoría</th>
+                                                <th className="px-4 py-3 text-right">Costo Est.</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-700/50">
+                                            {items.map(p => (
+                                                <tr key={p.id} className="text-sm hover:bg-slate-700/20">
+                                                    <td className="px-4 py-3">
+                                                        <div className="font-medium text-white">{p.name}</div>
+                                                        {p.barcode && <div className="text-[10px] text-slate-500 font-mono">{p.barcode}</div>}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-400">{p.category}</td>
+                                                    <td className="px-4 py-3 text-right text-slate-300 font-mono">${p.cost.toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-4 bg-slate-800 rounded-b-2xl border-t border-slate-700 flex justify-end">
+                    <button 
+                        onClick={() => setShowRestockModal(false)}
                         className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-colors"
                     >
                         Cerrar
