@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCyber } from '../context/CyberContext';
-import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu, Clock, Eye, EyeOff } from 'lucide-react';
+import { DollarSign, MonitorPlay, Users, TrendingUp, Monitor, Gamepad2, Play, Square, AlertCircle, Timer, ShoppingBag, Settings, PlusCircle, MinusCircle, Calendar, Tv, Cpu, Clock, Eye, EyeOff, X, Banknote, ArrowUpCircle, ArrowRightLeft, CreditCard, ArrowDownCircle, Wallet } from 'lucide-react';
 import { Station, StationStatus, DeviceType, Tariff, SessionType, PaymentMethod } from '../types';
 import StartSessionModal from './StartSessionModal';
 import AddProductToSessionModal from './AddProductToSessionModal';
@@ -243,7 +243,7 @@ const StationCard: React.FC<{ station: Station; tariffs: Tariff[] }> = ({ statio
 
 // --- Main Dashboard Component ---
 const Dashboard: React.FC = () => {
-  const { sales, stations, tariffs, addStation } = useCyber();
+  const { sales, expenses, stations, tariffs, addStation } = useCyber();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStationName, setNewStationName] = useState('');
   
@@ -253,6 +253,7 @@ const Dashboard: React.FC = () => {
 
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showWeeklyDetail, setShowWeeklyDetail] = useState(false);
 
   // --- Privacy States (Individual) ---
   // Initialize from LocalStorage to persist state across navigation
@@ -287,6 +288,19 @@ const Dashboard: React.FC = () => {
   const weeklySales = sales.filter(s => Number(s.timestamp) >= startOfWeek.getTime());
   const weeklyRevenue = weeklySales.reduce((acc, curr) => acc + curr.total, 0);
   
+  // -- Weekly Breakdown Calculations for Modal --
+  const weeklyCashSales = weeklySales.filter(s => s.paymentMethod === 'CASH').reduce((acc, s) => acc + s.total, 0);
+  const weeklyTransferSales = weeklySales.filter(s => s.paymentMethod === 'TRANSFER').reduce((acc, s) => acc + s.total, 0);
+  const weeklyCardSales = weeklySales.filter(s => s.paymentMethod === 'CARD' || s.paymentMethod === 'CLIP').reduce((acc, s) => acc + s.total, 0);
+
+  const weeklyExpensesList = expenses.filter(e => Number(e.timestamp) >= startOfWeek.getTime());
+  const weeklyTotalExpenses = weeklyExpensesList.reduce((acc, e) => acc + e.amount, 0);
+  const weeklyCashExpenses = weeklyExpensesList.filter(e => e.affectsCashBox !== false).reduce((acc, e) => acc + e.amount, 0);
+  const weeklyOtherExpenses = weeklyExpensesList.filter(e => e.affectsCashBox === false).reduce((acc, e) => acc + e.amount, 0);
+
+  // Net Cash in Drawer for the week (Sales Cash - Expenses Cash)
+  const weeklyNetCash = weeklyCashSales - weeklyCashExpenses;
+
   // Formatted date range for display
   const weeklyDateRange = `${startOfWeek.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} - Presente`;
 
@@ -342,19 +356,22 @@ const Dashboard: React.FC = () => {
       {/* Top Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Weekly Sales Card */}
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl group">
+        {/* Weekly Sales Card - Clickable */}
+        <button 
+            onClick={() => setShowWeeklyDetail(true)}
+            className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl group text-left hover:ring-2 hover:ring-blue-500/50 hover:bg-slate-700/50 transition-all cursor-pointer relative"
+        >
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-2">
                   <p className="text-slate-400 text-sm font-medium">Ventas Semana (Sáb-Vie)</p>
-                  <button 
-                    onClick={() => setShowWeekly(!showWeekly)} 
-                    className="text-slate-500 hover:text-white transition-colors"
+                  <div 
+                    onClick={(e) => { e.stopPropagation(); setShowWeekly(!showWeekly); }} 
+                    className="text-slate-500 hover:text-white transition-colors cursor-pointer"
                     title={showWeekly ? "Ocultar cantidad" : "Mostrar cantidad"}
                   >
                       {showWeekly ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                  </button>
+                  </div>
               </div>
               <h3 className="text-3xl font-bold text-white mt-2">
                   {showWeekly ? `$${weeklyRevenue.toFixed(2)}` : '••••••'}
@@ -368,7 +385,12 @@ const Dashboard: React.FC = () => {
             <TrendingUp className="w-4 h-4" />
             <span>{weeklyDateRange}</span>
           </div>
-        </div>
+          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="bg-blue-600 p-1.5 rounded-full shadow-lg">
+                  <PlusCircle className="w-4 h-4 text-white" /> 
+              </div>
+          </div>
+        </button>
 
         {/* Monthly Sales Card */}
         <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl group">
@@ -485,6 +507,94 @@ const Dashboard: React.FC = () => {
       {/* Modals */}
       {showEntryModal && <EntryModal onClose={() => setShowEntryModal(false)} />}
       {showExpenseModal && <ExpenseModal onClose={() => setShowExpenseModal(false)} />}
+
+      {/* Weekly Summary Modal */}
+      {showWeeklyDetail && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                <div className="bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-700 shadow-2xl animate-in fade-in zoom-in duration-200">
+                    <div className="bg-blue-600 p-5 flex justify-between items-center rounded-t-2xl">
+                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                            <Banknote className="w-6 h-6" /> Resumen Semanal
+                        </h3>
+                        <button onClick={() => setShowWeeklyDetail(false)} className="text-blue-100 hover:text-white">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    <div className="p-6 space-y-6">
+                        
+                        <p className="text-center text-slate-400 text-sm">
+                            Desglose financiero del periodo: <br />
+                            <strong className="text-white">{weeklyDateRange}</strong>
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* CAJA (Cash Sales) */}
+                            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                                <div className="flex items-center gap-2 text-emerald-400 mb-2 font-bold text-sm">
+                                    <ArrowUpCircle className="w-4 h-4" /> Ventas Efectivo
+                                </div>
+                                <p className="text-2xl font-bold text-white">${weeklyCashSales.toFixed(2)}</p>
+                            </div>
+
+                            {/* TRANSFERENCIAS */}
+                            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                                <div className="flex items-center gap-2 text-blue-400 mb-2 font-bold text-sm">
+                                    <ArrowRightLeft className="w-4 h-4" /> Transferencias
+                                </div>
+                                <p className="text-2xl font-bold text-white">${weeklyTransferSales.toFixed(2)}</p>
+                            </div>
+
+                            {/* TARJETA (If any) */}
+                            {weeklyCardSales > 0 && (
+                                <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 col-span-2 md:col-span-1">
+                                    <div className="flex items-center gap-2 text-indigo-400 mb-2 font-bold text-sm">
+                                        <CreditCard className="w-4 h-4" /> Tarjeta / Clip
+                                    </div>
+                                    <p className="text-2xl font-bold text-white">${weeklyCardSales.toFixed(2)}</p>
+                                </div>
+                            )}
+
+                            {/* GASTOS TOTALES */}
+                            <div className={`bg-slate-800 p-4 rounded-xl border border-slate-700 ${weeklyCardSales > 0 ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}>
+                                <div className="flex items-center gap-2 text-rose-400 mb-2 font-bold text-sm">
+                                    <ArrowDownCircle className="w-4 h-4" /> Gastos
+                                </div>
+                                <p className="text-2xl font-bold text-white">-${weeklyTotalExpenses.toFixed(2)}</p>
+                                <div className="flex gap-2 mt-1">
+                                    <span className="text-[10px] bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">Caja: ${weeklyCashExpenses.toFixed(0)}</span>
+                                    <span className="text-[10px] bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">Otros: ${weeklyOtherExpenses.toFixed(0)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* FINAL BALANCE BOX (CASH IN HAND) */}
+                        <div className="bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-500/30 rounded-xl p-5">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-emerald-200 font-bold uppercase text-xs tracking-wider">Dinero Físico en Caja (Esta semana)</span>
+                                <Wallet className="w-5 h-5 text-emerald-400" />
+                            </div>
+                            <div className="text-4xl font-bold text-white mb-2">
+                                ${weeklyNetCash.toFixed(2)}
+                            </div>
+                            <p className="text-xs text-emerald-400/60 border-t border-emerald-500/20 pt-2">
+                                = Ventas Efectivo - Gastos de Caja
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div className="p-4 bg-slate-800 rounded-b-2xl border-t border-slate-700 flex justify-end">
+                        <button 
+                            onClick={() => setShowWeeklyDetail(false)}
+                            className="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-colors"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
       {/* Modal for New Station */}
       {isModalOpen && (
